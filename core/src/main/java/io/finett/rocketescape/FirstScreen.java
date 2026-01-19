@@ -212,7 +212,10 @@ public class FirstScreen implements Screen {
             shakeX = MathUtils.random(-shakeIntensity, shakeIntensity);
         }
 
+        // Draw background with darker tint (0.5 = 50% brightness)
+        batch.setColor(0.5f, 0.5f, 0.5f, 1f);
         batch.draw(background, shakeX, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        batch.setColor(1f, 1f, 1f, 1f); // Reset color to normal
 
         for (SpikeData spike : spikeData) {
             if (spike.isTop) {
