@@ -51,11 +51,14 @@ public class FirstScreen implements Screen {
     private float spikeGap;
     private static final float SPIKE_SPACING = 300;
 
+    // Background brightness constants for better contrast with foreground elements
+    private static final float BACKGROUND_BRIGHTNESS = 0.5f;
+    private static final float DEFAULT_BRIGHTNESS = 1f;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
         boolean isTop;
-        // Треугольный хитбокс: 3 вершины
         Vector2 p1, p2, p3;
 
         public SpikeData(Rectangle rect, int textureIndex, boolean isTop) {
@@ -70,17 +73,13 @@ public class FirstScreen implements Screen {
 
         public void updateTriangle() {
             if (isTop) {
-                // Треугольник вершиной вниз (V)
-                // Основание у верхней границы экрана
-                p1.set(rect.x, rect.y + rect.height);                    // Левый верхний угол
-                p2.set(rect.x + rect.width, rect.y + rect.height);       // Правый верхний угол
-                p3.set(rect.x + rect.width / 2, rect.y);                 // Нижняя вершина (острие)
+                p1.set(rect.x, rect.y + rect.height);
+                p2.set(rect.x + rect.width, rect.y + rect.height);
+                p3.set(rect.x + rect.width / 2, rect.y);
             } else {
-                // Треугольник вершиной вверх (^)
-                // Основание у нижней границы экрана
-                p1.set(rect.x, rect.y);                                  // Левый нижний угол
-                p2.set(rect.x + rect.width, rect.y);                     // Правый нижний угол
-                p3.set(rect.x + rect.width / 2, rect.y + rect.height);   // Верхняя вершина (острие)
+                p1.set(rect.x, rect.y);
+                p2.set(rect.x + rect.width, rect.y);
+                p3.set(rect.x + rect.width / 2, rect.y + rect.height);
             }
         }
     }
@@ -212,10 +211,10 @@ public class FirstScreen implements Screen {
             shakeX = MathUtils.random(-shakeIntensity, shakeIntensity);
         }
 
-        // Draw background with darker tint (0.5 = 50% brightness)
-        batch.setColor(0.5f, 0.5f, 0.5f, 1f);
+        // Apply darker tint to background for better contrast with foreground elements
+        batch.setColor(BACKGROUND_BRIGHTNESS, BACKGROUND_BRIGHTNESS, BACKGROUND_BRIGHTNESS, DEFAULT_BRIGHTNESS);
         batch.draw(background, shakeX, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        batch.setColor(1f, 1f, 1f, 1f); // Reset color to normal
+        batch.setColor(DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS);
 
         for (SpikeData spike : spikeData) {
             if (spike.isTop) {
@@ -334,7 +333,6 @@ public class FirstScreen implements Screen {
         spikeData.add(new SpikeData(bottomSpike, spikeIndex, false));
     }
 
-    // Проверка, находится ли точка внутри треугольника
     private boolean pointInTriangle(float px, float py, Vector2 p1, Vector2 p2, Vector2 p3) {
         float d1 = sign(px, py, p1.x, p1.y, p2.x, p2.y);
         float d2 = sign(px, py, p2.x, p2.y, p3.x, p3.y);
@@ -350,18 +348,14 @@ public class FirstScreen implements Screen {
         return (px - x2) * (y1 - y2) - (x1 - x2) * (py - y2);
     }
 
-    // Проверка пересечения прямоугольника ракеты с треугольником
     private boolean rectangleIntersectsTriangle(Rectangle rect, Vector2 p1, Vector2 p2, Vector2 p3) {
-        // Проверяем 4 угла ракеты
         if (pointInTriangle(rect.x, rect.y, p1, p2, p3)) return true;
         if (pointInTriangle(rect.x + rect.width, rect.y, p1, p2, p3)) return true;
         if (pointInTriangle(rect.x, rect.y + rect.height, p1, p2, p3)) return true;
         if (pointInTriangle(rect.x + rect.width, rect.y + rect.height, p1, p2, p3)) return true;
 
-        // Проверяем центр ракеты
         if (pointInTriangle(rect.x + rect.width / 2, rect.y + rect.height / 2, p1, p2, p3)) return true;
 
-        // Проверяем середины сторон ракеты
         if (pointInTriangle(rect.x + rect.width / 2, rect.y, p1, p2, p3)) return true;
         if (pointInTriangle(rect.x + rect.width / 2, rect.y + rect.height, p1, p2, p3)) return true;
         if (pointInTriangle(rect.x, rect.y + rect.height / 2, p1, p2, p3)) return true;
