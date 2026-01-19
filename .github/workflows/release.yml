@@ -1,0 +1,96 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build APK
+        run: ./gradlew android:assembleRelease --no-daemon
+
+      - name: Sign APK (optional, if you have keystore)
+        if: false  # Set to true if you have signing keys
+        run: |
+          # Add your APK signing commands here
+          # jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+          #   -keystore ${{ secrets.KEYSTORE_FILE }} \
+          #   android/build/outputs/apk/release/android-release-unsigned.apk \
+          #   ${{ secrets.KEY_ALIAS }}
+
+      - name: Rename APK
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          mv android/build/outputs/apk/release/android-release-unsigned.apk \
+             RocketEscape-${VERSION}.apk
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## What's Changed
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Download
+            Download the APK below and install on your Android device.
+
+            **Note:** You may need to enable "Install from Unknown Sources" in your device settings.
+          files: |
+            RocketEscape-${{ steps.version.outputs.VERSION }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RocketEscape-${{ steps.version.outputs.VERSION }}
+          path: RocketEscape-${{ steps.version.outputs.VERSION }}.apk
+          retention-days: 90
