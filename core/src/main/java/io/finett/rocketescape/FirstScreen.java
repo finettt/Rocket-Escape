@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.ParticleEffectPool;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
@@ -17,13 +18,14 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
-/** First screen of the application. Displayed after the application is created. */
 public class FirstScreen implements Screen {
     private SpriteBatch batch;
+    private ShapeRenderer shapeRenderer;
     private Texture background;
     private Texture rocket;
     private Texture[] spikes;
     private BitmapFont font;
+    private BitmapFont comboFont;
 
     private Rectangle rocketRect;
     private Array<SpikeData> spikeData;
@@ -46,12 +48,18 @@ public class FirstScreen implements Screen {
     private float shakeTimer;
     private float shakeIntensity;
 
+    // Combo system
+    private int combo;
+    private float comboTimer;
+    private static final float COMBO_TIMEOUT = 5f;
+    private static final int COMBO_THRESHOLD = 3;
+    private static final int COMBO_BONUS_MULTIPLIER = 2;
+
     private static final float ROCKET_SIZE = 64;
     private float spikeWidth;
     private float spikeGap;
     private static final float SPIKE_SPACING = 300;
 
-    // Background brightness constants for better contrast with foreground elements
     private static final float BACKGROUND_BRIGHTNESS = 0.5f;
     private static final float DEFAULT_BRIGHTNESS = 1f;
 
@@ -90,14 +98,16 @@ public class FirstScreen implements Screen {
         float velocity;
         float alpha;
         float timer;
+        boolean isCombo;
 
-        public ScorePopup(String text, float x, float y) {
+        public ScorePopup(String text, float x, float y, boolean isCombo) {
             this.text = text;
             this.x = x;
             this.y = y;
             this.velocity = -50f;
             this.alpha = 1f;
             this.timer = 0f;
+            this.isCombo = isCombo;
         }
 
         public boolean update(float delta) {
@@ -113,6 +123,7 @@ public class FirstScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
         background = new Texture("space-bg.png");
         rocket = new Texture("rocket.png");
 
@@ -128,6 +139,9 @@ public class FirstScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = 24;
         font = generator.generateFont(parameter);
+
+        parameter.size = 32;
+        comboFont = generator.generateFont(parameter);
         generator.dispose();
 
         rocketRect = new Rectangle();
@@ -153,6 +167,8 @@ public class FirstScreen implements Screen {
         gravity = -15f;
         spikeTimer = 0;
         score = 0;
+        combo = 0;
+        comboTimer = 0;
         gameOver = false;
         ready = true;
         go = false;
@@ -211,7 +227,6 @@ public class FirstScreen implements Screen {
             shakeX = MathUtils.random(-shakeIntensity, shakeIntensity);
         }
 
-        // Apply darker tint to background for better contrast with foreground elements
         batch.setColor(BACKGROUND_BRIGHTNESS, BACKGROUND_BRIGHTNESS, BACKGROUND_BRIGHTNESS, DEFAULT_BRIGHTNESS);
         batch.draw(background, shakeX, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.setColor(DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS, DEFAULT_BRIGHTNESS);
@@ -243,12 +258,53 @@ public class FirstScreen implements Screen {
         batch.draw(rocket, rocketRect.x + shakeX, rocketRect.y, rocketRect.width, rocketRect.height);
 
         for (ScorePopup popup : scorePopups) {
-            font.setColor(1, 1, 1, popup.alpha);
+            if (popup.isCombo) {
+                font.setColor(1f, 0.84f, 0f, popup.alpha);
+            } else {
+                font.setColor(1, 1, 1, popup.alpha);
+            }
             font.draw(batch, popup.text, popup.x + shakeX, popup.y);
         }
         font.setColor(1, 1, 1, 1);
 
         font.draw(batch, "Score: " + score, 20 + shakeX, Gdx.graphics.getHeight() - 20);
+
+        if (combo >= 2 && !gameOver) {
+            float comboIntensity = Math.min(1f, (float)combo / 10f);
+            comboFont.setColor(1f, 1f - (comboIntensity * 0.16f), 1f - comboIntensity, 1f);
+
+            String comboText = "COMBO x" + combo;
+            GlyphLayout comboLayout = new GlyphLayout(comboFont, comboText);
+            comboFont.draw(batch, comboText, Gdx.graphics.getWidth() - comboLayout.width - 20 + shakeX, Gdx.graphics.getHeight() - 20);
+
+            comboFont.setColor(1, 1, 1, 1);
+        }
+
+        batch.end();
+
+        // Draw combo timer bar using ShapeRenderer
+        if (combo >= 2 && !gameOver) {
+            float barWidth = 100f;
+            float barHeight = 8f;
+            float barX = Gdx.graphics.getWidth() - barWidth - 20 + shakeX;
+            float barY = Gdx.graphics.getHeight() - 55;
+            float fillWidth = (comboTimer / COMBO_TIMEOUT) * barWidth;
+
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+            // Background bar (dark gray)
+            shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
+            shapeRenderer.rect(barX, barY, barWidth, barHeight);
+
+            // Fill bar (gradient from green to red)
+            float timerRatio = comboTimer / COMBO_TIMEOUT;
+            shapeRenderer.setColor(1f - timerRatio, timerRatio, 0f, 1f);
+            shapeRenderer.rect(barX, barY, fillWidth, barHeight);
+
+            shapeRenderer.end();
+        }
+
+        batch.begin();
 
         if (ready) {
             GlyphLayout layout = new GlyphLayout(font, "READY?");
@@ -294,6 +350,14 @@ public class FirstScreen implements Screen {
             rocketVelocity = 0;
         }
 
+        if (combo > 0) {
+            comboTimer -= delta;
+            if (comboTimer <= 0) {
+                combo = 0;
+                comboTimer = 0;
+            }
+        }
+
         spikeTimer += delta;
         if (spikeTimer > 3.5f) {
             spawnSpikes();
@@ -308,9 +372,20 @@ public class FirstScreen implements Screen {
 
             if (spike.rect.x + spike.rect.width < 0) {
                 if (!scoredThisFrame && !spike.isTop) {
-                    score++;
+                    combo++;
+                    comboTimer = COMBO_TIMEOUT;
+
+                    int pointsEarned = 1;
+                    scorePopups.add(new ScorePopup("+1", rocketRect.x, rocketRect.y + rocketRect.height, false));
+
+                    if (combo >= COMBO_THRESHOLD) {
+                        int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER;
+                        pointsEarned += bonusPoints;
+                        scorePopups.add(new ScorePopup("+" + bonusPoints + " COMBO!", rocketRect.x, rocketRect.y + rocketRect.height + 30, true));
+                    }
+
+                    score += pointsEarned;
                     scoredThisFrame = true;
-                    scorePopups.add(new ScorePopup("+1", rocketRect.x, rocketRect.y + rocketRect.height));
                 }
                 spikeData.removeIndex(i);
                 i--;
@@ -398,12 +473,14 @@ public class FirstScreen implements Screen {
     @Override
     public void dispose() {
         batch.dispose();
+        shapeRenderer.dispose();
         background.dispose();
         rocket.dispose();
         for (Texture spike : spikes) {
             spike.dispose();
         }
         font.dispose();
+        comboFont.dispose();
         particleEffect.dispose();
     }
 }
