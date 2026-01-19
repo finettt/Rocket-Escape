@@ -52,8 +52,11 @@ public class FirstScreen implements Screen {
     private int combo;
     private int maxCombo;
     private float comboTimer;
+    private boolean comboExpiring;
     /** Time in seconds before combo resets */
     private static final float COMBO_TIMEOUT = 5f;
+    /** Time threshold when combo is considered "expiring" for visual warning */
+    private static final float COMBO_EXPIRING_THRESHOLD = 1.5f;
     /** Minimum combo count to start earning bonus points */
     private static final int COMBO_THRESHOLD = 3;
     /** Multiplier applied to bonus points calculation */
@@ -74,6 +77,13 @@ public class FirstScreen implements Screen {
     private static final float COMBO_BAR_WIDTH = 100f;
     private static final float COMBO_BAR_HEIGHT = 8f;
     private static final float COMBO_BAR_Y_OFFSET = 55f;
+
+    // Combo bar colors
+    private static final float COMBO_BAR_BG_COLOR = 0.3f;
+    private static final float COMBO_BAR_FULL_R = 0f;
+    private static final float COMBO_BAR_FULL_G = 1f;
+    private static final float COMBO_BAR_EMPTY_R = 1f;
+    private static final float COMBO_BAR_EMPTY_G = 0f;
 
     // Cached GlyphLayouts to avoid repeated allocations
     private GlyphLayout comboLayout;
@@ -215,6 +225,7 @@ public class FirstScreen implements Screen {
         combo = 0;
         maxCombo = 0;
         comboTimer = 0;
+        comboExpiring = false;
         gameOver = false;
         ready = true;
         go = false;
@@ -313,7 +324,14 @@ public class FirstScreen implements Screen {
 
         if (combo >= 2 && !gameOver && comboFont != null) {
             float comboIntensity = Math.min(1f, (float)combo / 10f);
-            comboFont.setColor(1f, 1f - (comboIntensity * 0.16f), 1f - comboIntensity, 1f);
+
+            // Flash effect when combo is about to expire
+            if (comboExpiring) {
+                float flash = (float)Math.sin(comboTimer * 10) * 0.5f + 0.5f;
+                comboFont.setColor(1f, flash, flash, 1f);
+            } else {
+                comboFont.setColor(1f, 1f - (comboIntensity * 0.16f), 1f - comboIntensity, 1f);
+            }
 
             String comboText = "COMBO x" + combo;
             comboLayout.setText(comboFont, comboText);
@@ -333,12 +351,14 @@ public class FirstScreen implements Screen {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
             // Background bar (dark gray)
-            shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
+            shapeRenderer.setColor(COMBO_BAR_BG_COLOR, COMBO_BAR_BG_COLOR, COMBO_BAR_BG_COLOR, 1f);
             shapeRenderer.rect(barX, barY, COMBO_BAR_WIDTH, COMBO_BAR_HEIGHT);
 
-            // Fill bar (gradient from green to red)
+            // Fill bar (gradient from green to red based on time remaining)
             float timerRatio = comboTimer / COMBO_TIMEOUT;
-            shapeRenderer.setColor(1f - timerRatio, timerRatio, 0f, 1f);
+            float r = COMBO_BAR_EMPTY_R + (COMBO_BAR_FULL_R - COMBO_BAR_EMPTY_R) * timerRatio;
+            float g = COMBO_BAR_EMPTY_G + (COMBO_BAR_FULL_G - COMBO_BAR_EMPTY_G) * timerRatio;
+            shapeRenderer.setColor(r, g, 0f, 1f);
             shapeRenderer.rect(barX, barY, fillWidth, COMBO_BAR_HEIGHT);
 
             shapeRenderer.end();
@@ -418,9 +438,14 @@ public class FirstScreen implements Screen {
     private void updateComboTimer(float delta) {
         if (combo > 0) {
             comboTimer -= delta;
+
+            // Check if combo is about to expire for visual warning
+            comboExpiring = comboTimer <= COMBO_EXPIRING_THRESHOLD && comboTimer > 0;
+
             if (comboTimer <= 0) {
                 combo = 0;
                 comboTimer = 0;
+                comboExpiring = false;
             }
         }
     }
@@ -433,6 +458,7 @@ public class FirstScreen implements Screen {
             maxCombo = combo;
         }
         comboTimer = COMBO_TIMEOUT;
+        comboExpiring = false;
     }
 
     private int calculatePoints() {
@@ -440,6 +466,9 @@ public class FirstScreen implements Screen {
         scorePopups.add(new ScorePopup("+1", rocketRect.x, rocketRect.y + rocketRect.height, false));
 
         if (combo >= COMBO_THRESHOLD) {
+            // Bonus formula: (current combo - threshold + 1) * multiplier
+            // Example: combo=3, threshold=3, multiplier=2 -> (3-3+1)*2 = 2 bonus points
+            // Example: combo=5, threshold=3, multiplier=2 -> (5-3+1)*2 = 6 bonus points
             int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER;
             pointsEarned += bonusPoints;
             scorePopups.add(new ScorePopup("+" + bonusPoints + " COMBO!", rocketRect.x, rocketRect.y + rocketRect.height + 30, true));
@@ -527,31 +556,40 @@ public class FirstScreen implements Screen {
     public void dispose() {
         if (batch != null) {
             batch.dispose();
+            batch = null;
         }
         if (shapeRenderer != null) {
             shapeRenderer.dispose();
+            shapeRenderer = null;
         }
         if (background != null) {
             background.dispose();
+            background = null;
         }
         if (rocket != null) {
             rocket.dispose();
+            rocket = null;
         }
         if (spikes != null) {
-            for (Texture spike : spikes) {
-                if (spike != null) {
-                    spike.dispose();
+            for (int i = 0; i < spikes.length; i++) {
+                if (spikes[i] != null) {
+                    spikes[i].dispose();
+                    spikes[i] = null;
                 }
             }
+            spikes = null;
         }
         if (font != null) {
             font.dispose();
+            font = null;
         }
         if (comboFont != null) {
             comboFont.dispose();
+            comboFont = null;
         }
         if (particleEffect != null) {
             particleEffect.dispose();
+            particleEffect = null;
         }
     }
 }
