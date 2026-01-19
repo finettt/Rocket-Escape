@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: AI Code Reviewer v0.12
-        uses: QluxLab/Reviewer@v0.12.0
+      - name: AI Code Reviewer v0.13
+        uses: QluxLab/Reviewer@v0.13.0
         with:
           openai_api_key: ${{ secrets.OPENROUTER_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
