@@ -1,35 +1,82 @@
-# RocketEscape
+# Rocket Escape
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+A fast-paced arcade game where you navigate a rocket through obstacles to escape!
 
-This project was generated with a template including simple application launchers and a main class extending `Game` that sets the first screen.
+## Features
 
-## Platforms
+- **Combo System**: Chain together successful maneuvers to earn bonus points
+- **Score Multiplier**: Build combos to increase your score multiplier
+- **Combo Expiration**: Watch out for combo timers with visual flash warnings
+- **Obstacle Course**: Navigate through challenging obstacles
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
-- `android`: Android mobile platform. Needs Android SDK.
+## Installation
 
-## Gradle
+### Prerequisites
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+- Node.js (v16 or higher)
+- npm or yarn
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `android:lint`: performs Android project validation.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+### Setup
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/finettt/Rocket-Escape.git
+   ```
+
+2. Navigate to the project directory:
+   ```bash
+   cd Rocket-Escape
+   ```
+
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+## Running the Game
+
+To start the game in development mode:
+```bash
+npm run dev
+```
+
+To build the game for production:
+```bash
+npm run build
+```
+
+## Controls
+
+- **Arrow Keys** or **WASD**: Move the rocket
+- **Space**: Launch/accelerate
+
+## Gameplay
+
+- Navigate your rocket through the obstacle course
+- Complete maneuvers to build combos
+- Watch for combo expiration warnings (flashing effect)
+- Aim for the highest score with maximum combo multipliers!
+
+## Building for Mobile
+
+The project includes an APK build workflow for Android:
+
+```bash
+npm run build-apk
+```
+
+## Code Structure
+
+- `src/`: Main source code
+- `public/`: Static assets
+- `assets/`: Game resources (images, sounds)
+
+## Recent Updates
+
+- Added combo system with bonus points
+- Implemented combo expiration with visual flash warnings
+- Improved code quality and resource management
+
+## License
+
+MIT License - see LICENSE file for details.
