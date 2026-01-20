@@ -49,20 +49,27 @@ public class FirstScreen implements Screen {
     private float shakeTimer;
     private float shakeIntensity;
 
-    // Combo system constants - can be adjusted for game balancing
+    // Lives system
+    private int lives;
+    private static final int MAX_LIVES = 3;
+    private float invulnerabilityTimer;
+    private static final float INVULNERABILITY_TIME = 2.0f;
+
+    // Difficulty progression
+    private float difficultyMultiplier;
+    private static final float DIFFICULTY_INCREASE_RATE = 0.01f;
+    private static final float MAX_DIFFICULTY = 2.5f;
+    private static final float BASE_SPIKE_SPEED = 200f;
+
+    // Combo system constants
     private int combo;
     private int maxCombo;
     private float comboTimer;
     private boolean comboExpiring;
-    /** Time in seconds before combo resets */
     private static final float COMBO_TIMEOUT = 5f;
-    /** Time threshold when combo is considered "expiring" for visual warning */
     private static final float COMBO_EXPIRING_THRESHOLD = 1.5f;
-    /** Minimum combo count to start earning bonus points */
     private static final int COMBO_THRESHOLD = 3;
-    /** Multiplier applied to bonus points calculation */
     private static final int COMBO_BONUS_MULTIPLIER = 2;
-    /** Maximum allowed combo value to prevent overflow */
     private static final int MAX_COMBO_VALUE = 999;
 
     private static final float ROCKET_SIZE = 64;
@@ -70,18 +77,20 @@ public class FirstScreen implements Screen {
     private float spikeGap;
     private static final float SPIKE_SPACING = 300;
 
-    // Константы для расстояния между препятствиями
+    // Obstacle spacing constants
     private static final float MIN_SPIKE_DELAY = 2.0f;
     private static final float MAX_SPIKE_DELAY = 4.5f;
 
     private static final float BACKGROUND_BRIGHTNESS = 0.5f;
     private static final float DEFAULT_BRIGHTNESS = 1f;
 
-    // UI positioning constants (relative to screen size)
+    // UI positioning constants
     private static final float UI_MARGIN = 20f;
     private static final float COMBO_BAR_WIDTH = 100f;
     private static final float COMBO_BAR_HEIGHT = 8f;
     private static final float COMBO_BAR_Y_OFFSET = 55f;
+    private static final float HEART_SIZE = 24f;
+    private static final float HEART_SPACING = 35f;
 
     // Combo bar colors
     private static final float COMBO_BAR_BG_COLOR = 0.3f;
@@ -90,12 +99,21 @@ public class FirstScreen implements Screen {
     private static final float COMBO_BAR_EMPTY_R = 1f;
     private static final float COMBO_BAR_EMPTY_G = 0f;
 
-    // Cached GlyphLayouts to avoid repeated allocations
+    // Heart colors
+    private static final float HEART_FULL_R = 1f;
+    private static final float HEART_FULL_G = 0.2f;
+    private static final float HEART_FULL_B = 0.2f;
+    private static final float HEART_EMPTY_R = 0.3f;
+    private static final float HEART_EMPTY_G = 0.3f;
+    private static final float HEART_EMPTY_B = 0.3f;
+
+    // Cached GlyphLayouts
     private GlyphLayout comboLayout;
     private GlyphLayout readyLayout;
     private GlyphLayout goLayout;
     private GlyphLayout gameOverLayout;
     private GlyphLayout restartLayout;
+    private GlyphLayout difficultyLayout;
 
     // Colors for score popups
     private static final float COMBO_COLOR_R = 1f;
@@ -107,7 +125,7 @@ public class FirstScreen implements Screen {
         int textureIndex;
         boolean isTop;
         Vector2 p1, p2, p3;
-        boolean scored; // Флаг для отслеживания начисления очков
+        boolean scored;
 
         public SpikeData(Rectangle rect, int textureIndex, boolean isTop) {
             this.rect = rect;
@@ -116,7 +134,7 @@ public class FirstScreen implements Screen {
             this.p1 = new Vector2();
             this.p2 = new Vector2();
             this.p3 = new Vector2();
-            this.scored = false; // Изначально очки не начислены
+            this.scored = false;
             updateTriangle();
         }
 
@@ -199,6 +217,7 @@ public class FirstScreen implements Screen {
         goLayout = new GlyphLayout();
         gameOverLayout = new GlyphLayout();
         restartLayout = new GlyphLayout();
+        difficultyLayout = new GlyphLayout();
 
         // Pre-compute static text layouts
         readyLayout.setText(font, "READY?");
@@ -228,6 +247,7 @@ public class FirstScreen implements Screen {
         rocketVelocity = 0;
         gravity = -15f;
         spikeTimer = 0;
+        difficultyMultiplier = 1.0f;
         nextSpikeDelay = getRandomSpikeDelay();
         score = 0;
         combo = 0;
@@ -241,6 +261,8 @@ public class FirstScreen implements Screen {
         goTimer = 0;
         shakeTimer = 0;
         shakeIntensity = 0;
+        lives = MAX_LIVES;
+        invulnerabilityTimer = 0;
 
         float rocketWidth = ROCKET_SIZE;
         float rocketHeight = ROCKET_SIZE * ((float)rocket.getHeight() / rocket.getWidth());
@@ -251,11 +273,56 @@ public class FirstScreen implements Screen {
     }
 
     /**
-     * Генерирует случайное время задержки между препятствиями
-     * @return случайное значение между MIN_SPIKE_DELAY и MAX_SPIKE_DELAY
+     * Генерирует случайное время задержки между препятствиями с учетом сложности
      */
     private float getRandomSpikeDelay() {
-        return MathUtils.random(MIN_SPIKE_DELAY, MAX_SPIKE_DELAY);
+        float adjustedMinDelay = Math.max(1.0f, MIN_SPIKE_DELAY / difficultyMultiplier);
+        float adjustedMaxDelay = Math.max(1.5f, MAX_SPIKE_DELAY / difficultyMultiplier);
+        return MathUtils.random(adjustedMinDelay, adjustedMaxDelay);
+    }
+
+    /**
+     * Обновляет множитель сложности на основе текущего счета
+     */
+    private void updateDifficulty() {
+        difficultyMultiplier = Math.min(MAX_DIFFICULTY, 1.0f + (score * DIFFICULTY_INCREASE_RATE));
+    }
+
+    /**
+     * Возвращает текущую скорость препятствий с учетом сложности
+     */
+    private float getCurrentSpikeSpeed() {
+        return BASE_SPIKE_SPEED * difficultyMultiplier;
+    }
+
+    /**
+     * Рисует сердце с помощью ShapeRenderer
+     */
+    private void drawHeart(float x, float y, float size, boolean filled) {
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        if (filled) {
+            shapeRenderer.setColor(HEART_FULL_R, HEART_FULL_G, HEART_FULL_B, 1f);
+        } else {
+            shapeRenderer.setColor(HEART_EMPTY_R, HEART_EMPTY_G, HEART_EMPTY_B, 1f);
+        }
+
+        // Рисуем сердце из двух кругов и треугольника
+        float halfSize = size / 2;
+        float quarterSize = size / 4;
+
+        // Левый круг
+        shapeRenderer.circle(x + quarterSize, y + halfSize, quarterSize, 20);
+        // Правый круг
+        shapeRenderer.circle(x + halfSize + quarterSize, y + halfSize, quarterSize, 20);
+        // Нижний треугольник
+        shapeRenderer.triangle(
+            x, y + halfSize,
+            x + size, y + halfSize,
+            x + halfSize, y
+        );
+
+        shapeRenderer.end();
     }
 
     @Override
@@ -276,6 +343,11 @@ public class FirstScreen implements Screen {
             }
         } else if (!gameOver) {
             updateGame(delta);
+        }
+
+        // Update invulnerability timer
+        if (invulnerabilityTimer > 0) {
+            invulnerabilityTimer -= delta;
         }
 
         for (int i = 0; i < scorePopups.size; i++) {
@@ -328,7 +400,14 @@ public class FirstScreen implements Screen {
             }
         }
 
+        // Draw rocket with invulnerability flashing effect
+        if (invulnerabilityTimer > 0) {
+            // Flash rocket when invulnerable
+            float flashAlpha = (float)Math.sin(invulnerabilityTimer * 20) * 0.5f + 0.5f;
+            batch.setColor(1, 1, 1, flashAlpha);
+        }
         batch.draw(rocket, rocketRect.x + shakeX, rocketRect.y, rocketRect.width, rocketRect.height);
+        batch.setColor(1, 1, 1, 1);
 
         for (ScorePopup popup : scorePopups) {
             popup.applyColor(font);
@@ -336,12 +415,18 @@ public class FirstScreen implements Screen {
         }
         font.setColor(1, 1, 1, 1);
 
+        // Draw score
         font.draw(batch, "Score: " + score, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN);
 
+        // Draw difficulty indicator
+        String difficultyText = String.format("x%.1f", difficultyMultiplier);
+        difficultyLayout.setText(font, difficultyText);
+        font.draw(batch, difficultyText, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN - 35);
+
+        // Draw combo
         if (combo >= 2 && !gameOver && comboFont != null) {
             float comboIntensity = Math.min(1f, (float)combo / 10f);
 
-            // Flash effect when combo is about to expire
             if (comboExpiring) {
                 float flash = (float)Math.sin(comboTimer * 10) * 0.5f + 0.5f;
                 comboFont.setColor(1f, flash, flash, 1f);
@@ -358,7 +443,16 @@ public class FirstScreen implements Screen {
 
         batch.end();
 
-        // Draw combo timer bar using ShapeRenderer
+        // Draw hearts (lives) using ShapeRenderer - только 3 сердца
+        float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
+        float heartY = Gdx.graphics.getHeight() - UI_MARGIN - HEART_SIZE - 10;
+
+        for (int i = 0; i < MAX_LIVES; i++) {
+            boolean filled = (i < lives);
+            drawHeart(heartStartX + i * HEART_SPACING + shakeX, heartY, HEART_SIZE, filled);
+        }
+
+        // Draw combo timer bar
         if (combo >= 2 && !gameOver && shapeRenderer != null) {
             float barX = Gdx.graphics.getWidth() - COMBO_BAR_WIDTH - UI_MARGIN + shakeX;
             float barY = Gdx.graphics.getHeight() - COMBO_BAR_Y_OFFSET;
@@ -366,11 +460,9 @@ public class FirstScreen implements Screen {
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-            // Background bar (dark gray)
             shapeRenderer.setColor(COMBO_BAR_BG_COLOR, COMBO_BAR_BG_COLOR, COMBO_BAR_BG_COLOR, 1f);
             shapeRenderer.rect(barX, barY, COMBO_BAR_WIDTH, COMBO_BAR_HEIGHT);
 
-            // Fill bar (gradient from green to red based on time remaining)
             float timerRatio = comboTimer / COMBO_TIMEOUT;
             float r = COMBO_BAR_EMPTY_R + (COMBO_BAR_FULL_R - COMBO_BAR_EMPTY_R) * timerRatio;
             float g = COMBO_BAR_EMPTY_G + (COMBO_BAR_FULL_G - COMBO_BAR_EMPTY_G) * timerRatio;
@@ -423,21 +515,24 @@ public class FirstScreen implements Screen {
         }
 
         updateComboTimer(delta);
+        updateDifficulty();
 
         spikeTimer += delta;
-        if (spikeTimer > nextSpikeDelay) {
+
+        // Проверяем превышение времени
+        if (spikeTimer >= nextSpikeDelay) {
             spawnSpikes();
             spikeTimer = 0;
             nextSpikeDelay = getRandomSpikeDelay();
         }
 
+        float currentSpeed = getCurrentSpikeSpeed();
+
         for (int i = 0; i < spikeData.size; i++) {
             SpikeData spike = spikeData.get(i);
-            spike.rect.x -= 200 * delta;
+            spike.rect.x -= currentSpeed * delta;
             spike.updateTriangle();
 
-            // Проверяем, прошла ли ракета мимо препятствия
-            // Очки начисляются когда центр ракеты прошел центр препятствия
             if (!spike.scored && !spike.isTop) {
                 float rocketCenterX = rocketRect.x + rocketRect.width / 2;
                 float spikeCenterX = spike.rect.x + spike.rect.width / 2;
@@ -450,7 +545,6 @@ public class FirstScreen implements Screen {
                 }
             }
 
-            // Удаляем препятствия, которые ушли за экран
             if (spike.rect.x + spike.rect.width < 0) {
                 spikeData.removeIndex(i);
                 i--;
@@ -463,8 +557,6 @@ public class FirstScreen implements Screen {
     private void updateComboTimer(float delta) {
         if (combo > 0) {
             comboTimer -= delta;
-
-            // Check if combo is about to expire for visual warning
             comboExpiring = comboTimer <= COMBO_EXPIRING_THRESHOLD && comboTimer > 0;
 
             if (comboTimer <= 0) {
@@ -491,9 +583,6 @@ public class FirstScreen implements Screen {
         scorePopups.add(new ScorePopup("+1", rocketRect.x, rocketRect.y + rocketRect.height, false));
 
         if (combo >= COMBO_THRESHOLD) {
-            // Bonus formula: (current combo - threshold + 1) * multiplier
-            // Example: combo=3, threshold=3, multiplier=2 -> (3-3+1)*2 = 2 bonus points
-            // Example: combo=5, threshold=3, multiplier=2 -> (5-3+1)*2 = 6 bonus points
             int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER;
             pointsEarned += bonusPoints;
             scorePopups.add(new ScorePopup("+" + bonusPoints + " COMBO!", rocketRect.x, rocketRect.y + rocketRect.height + 30, true));
@@ -547,13 +636,39 @@ public class FirstScreen implements Screen {
     }
 
     private void checkCollisions() {
+        // Skip collision check if invulnerable
+        if (invulnerabilityTimer > 0) {
+            return;
+        }
+
         for (SpikeData spike : spikeData) {
             if (rectangleIntersectsTriangle(rocketRect, spike.p1, spike.p2, spike.p3)) {
-                gameOver = true;
-                shakeTimer = 0.5f;
-                shakeIntensity = 10f;
+                handleCollision();
                 break;
             }
+        }
+    }
+
+    private void handleCollision() {
+        lives--;
+
+        if (lives <= 0) {
+            gameOver = true;
+            shakeTimer = 0.5f;
+            shakeIntensity = 10f;
+        } else {
+            // Give invulnerability and visual feedback
+            invulnerabilityTimer = INVULNERABILITY_TIME;
+            shakeTimer = 0.3f;
+            shakeIntensity = 5f;
+
+            // Reset combo on hit
+            combo = 0;
+            comboTimer = 0;
+            comboExpiring = false;
+
+            // Add visual feedback
+            scorePopups.add(new ScorePopup("-1 life", rocketRect.x, rocketRect.y + rocketRect.height, false));
         }
     }
 
