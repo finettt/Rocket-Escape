@@ -33,6 +33,7 @@ public class FirstScreen implements Screen {
     private float rocketVelocity;
     private float gravity;
     private float spikeTimer;
+    private float nextSpikeDelay;
     private int score;
     private boolean gameOver;
     private boolean ready;
@@ -69,6 +70,10 @@ public class FirstScreen implements Screen {
     private float spikeGap;
     private static final float SPIKE_SPACING = 300;
 
+    // Константы для расстояния между препятствиями
+    private static final float MIN_SPIKE_DELAY = 2.0f;
+    private static final float MAX_SPIKE_DELAY = 4.5f;
+
     private static final float BACKGROUND_BRIGHTNESS = 0.5f;
     private static final float DEFAULT_BRIGHTNESS = 1f;
 
@@ -102,6 +107,7 @@ public class FirstScreen implements Screen {
         int textureIndex;
         boolean isTop;
         Vector2 p1, p2, p3;
+        boolean scored; // Флаг для отслеживания начисления очков
 
         public SpikeData(Rectangle rect, int textureIndex, boolean isTop) {
             this.rect = rect;
@@ -110,6 +116,7 @@ public class FirstScreen implements Screen {
             this.p1 = new Vector2();
             this.p2 = new Vector2();
             this.p3 = new Vector2();
+            this.scored = false; // Изначально очки не начислены
             updateTriangle();
         }
 
@@ -221,6 +228,7 @@ public class FirstScreen implements Screen {
         rocketVelocity = 0;
         gravity = -15f;
         spikeTimer = 0;
+        nextSpikeDelay = getRandomSpikeDelay();
         score = 0;
         combo = 0;
         maxCombo = 0;
@@ -240,6 +248,14 @@ public class FirstScreen implements Screen {
 
         spikeData.clear();
         scorePopups.clear();
+    }
+
+    /**
+     * Генерирует случайное время задержки между препятствиями
+     * @return случайное значение между MIN_SPIKE_DELAY и MAX_SPIKE_DELAY
+     */
+    private float getRandomSpikeDelay() {
+        return MathUtils.random(MIN_SPIKE_DELAY, MAX_SPIKE_DELAY);
     }
 
     @Override
@@ -409,24 +425,33 @@ public class FirstScreen implements Screen {
         updateComboTimer(delta);
 
         spikeTimer += delta;
-        if (spikeTimer > 3.5f) {
+        if (spikeTimer > nextSpikeDelay) {
             spawnSpikes();
             spikeTimer = 0;
+            nextSpikeDelay = getRandomSpikeDelay();
         }
 
-        boolean scoredThisFrame = false;
         for (int i = 0; i < spikeData.size; i++) {
             SpikeData spike = spikeData.get(i);
             spike.rect.x -= 200 * delta;
             spike.updateTriangle();
 
-            if (spike.rect.x + spike.rect.width < 0) {
-                if (!scoredThisFrame && !spike.isTop) {
+            // Проверяем, прошла ли ракета мимо препятствия
+            // Очки начисляются когда центр ракеты прошел центр препятствия
+            if (!spike.scored && !spike.isTop) {
+                float rocketCenterX = rocketRect.x + rocketRect.width / 2;
+                float spikeCenterX = spike.rect.x + spike.rect.width / 2;
+
+                if (rocketCenterX > spikeCenterX) {
+                    spike.scored = true;
                     incrementCombo();
                     int pointsEarned = calculatePoints();
                     score += pointsEarned;
-                    scoredThisFrame = true;
                 }
+            }
+
+            // Удаляем препятствия, которые ушли за экран
+            if (spike.rect.x + spike.rect.width < 0) {
                 spikeData.removeIndex(i);
                 i--;
             }
