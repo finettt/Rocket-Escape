@@ -19,6 +19,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
 public class FirstScreen implements Screen {
+    private final Main game;
+
     private SpriteBatch batch;
     private ShapeRenderer shapeRenderer;
     private Texture background;
@@ -120,6 +122,10 @@ public class FirstScreen implements Screen {
     private static final float COMBO_COLOR_G = 0.84f;
     private static final float COMBO_COLOR_B = 0f;
 
+    // Menu return
+    private float holdTimer;
+    private static final float HOLD_TIME_FOR_MENU = 1.0f;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
@@ -185,6 +191,10 @@ public class FirstScreen implements Screen {
                 font.setColor(1, 1, 1, alpha);
             }
         }
+    }
+
+    public FirstScreen(Main game) {
+        this.game = game;
     }
 
     @Override
@@ -263,6 +273,7 @@ public class FirstScreen implements Screen {
         shakeIntensity = 0;
         lives = MAX_LIVES;
         invulnerabilityTimer = 0;
+        holdTimer = 0;
 
         float rocketWidth = ROCKET_SIZE;
         float rocketHeight = ROCKET_SIZE * ((float)rocket.getHeight() / rocket.getWidth());
@@ -272,32 +283,20 @@ public class FirstScreen implements Screen {
         scorePopups.clear();
     }
 
-    /**
-     * Генерирует случайное время задержки между препятствиями с учетом сложности
-     */
     private float getRandomSpikeDelay() {
         float adjustedMinDelay = Math.max(1.0f, MIN_SPIKE_DELAY / difficultyMultiplier);
         float adjustedMaxDelay = Math.max(1.5f, MAX_SPIKE_DELAY / difficultyMultiplier);
         return MathUtils.random(adjustedMinDelay, adjustedMaxDelay);
     }
 
-    /**
-     * Обновляет множитель сложности на основе текущего счета
-     */
     private void updateDifficulty() {
         difficultyMultiplier = Math.min(MAX_DIFFICULTY, 1.0f + (score * DIFFICULTY_INCREASE_RATE));
     }
 
-    /**
-     * Возвращает текущую скорость препятствий с учетом сложности
-     */
     private float getCurrentSpikeSpeed() {
         return BASE_SPIKE_SPEED * difficultyMultiplier;
     }
 
-    /**
-     * Рисует сердце с помощью ShapeRenderer
-     */
     private void drawHeart(float x, float y, float size, boolean filled) {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -307,15 +306,11 @@ public class FirstScreen implements Screen {
             shapeRenderer.setColor(HEART_EMPTY_R, HEART_EMPTY_G, HEART_EMPTY_B, 1f);
         }
 
-        // Рисуем сердце из двух кругов и треугольника
         float halfSize = size / 2;
         float quarterSize = size / 4;
 
-        // Левый круг
         shapeRenderer.circle(x + quarterSize, y + halfSize, quarterSize, 20);
-        // Правый круг
         shapeRenderer.circle(x + halfSize + quarterSize, y + halfSize, quarterSize, 20);
-        // Нижний треугольник
         shapeRenderer.triangle(
             x, y + halfSize,
             x + size, y + halfSize,
@@ -345,7 +340,6 @@ public class FirstScreen implements Screen {
             updateGame(delta);
         }
 
-        // Update invulnerability timer
         if (invulnerabilityTimer > 0) {
             invulnerabilityTimer -= delta;
         }
@@ -400,9 +394,7 @@ public class FirstScreen implements Screen {
             }
         }
 
-        // Draw rocket with invulnerability flashing effect
         if (invulnerabilityTimer > 0) {
-            // Flash rocket when invulnerable
             float flashAlpha = (float)Math.sin(invulnerabilityTimer * 20) * 0.5f + 0.5f;
             batch.setColor(1, 1, 1, flashAlpha);
         }
@@ -415,15 +407,12 @@ public class FirstScreen implements Screen {
         }
         font.setColor(1, 1, 1, 1);
 
-        // Draw score
         font.draw(batch, "Score: " + score, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN);
 
-        // Draw difficulty indicator
         String difficultyText = String.format("x%.1f", difficultyMultiplier);
         difficultyLayout.setText(font, difficultyText);
         font.draw(batch, difficultyText, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN - 35);
 
-        // Draw combo
         if (combo >= 2 && !gameOver && comboFont != null) {
             float comboIntensity = Math.min(1f, (float)combo / 10f);
 
@@ -443,7 +432,6 @@ public class FirstScreen implements Screen {
 
         batch.end();
 
-        // Draw hearts (lives) using ShapeRenderer - только 3 сердца
         float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
         float heartY = Gdx.graphics.getHeight() - UI_MARGIN - HEART_SIZE - 10;
 
@@ -452,7 +440,6 @@ public class FirstScreen implements Screen {
             drawHeart(heartStartX + i * HEART_SPACING + shakeX, heartY, HEART_SIZE, filled);
         }
 
-        // Draw combo timer bar
         if (combo >= 2 && !gameOver && shapeRenderer != null) {
             float barX = Gdx.graphics.getWidth() - COMBO_BAR_WIDTH - UI_MARGIN + shakeX;
             float barY = Gdx.graphics.getHeight() - COMBO_BAR_Y_OFFSET;
@@ -479,16 +466,35 @@ public class FirstScreen implements Screen {
         } else if (go) {
             font.draw(batch, "GO!", Gdx.graphics.getWidth() / 2 - goLayout.width / 2 + shakeX, Gdx.graphics.getHeight() / 2);
         } else if (gameOver) {
-            font.draw(batch, "GAME OVER", Gdx.graphics.getWidth() / 2 - gameOverLayout.width / 2 + shakeX, Gdx.graphics.getHeight() / 2);
-            font.draw(batch, "Tap to restart", Gdx.graphics.getWidth() / 2 - restartLayout.width / 2 + shakeX, Gdx.graphics.getHeight() / 2 - 40);
+            font.draw(batch, "GAME OVER", Gdx.graphics.getWidth() / 2 - gameOverLayout.width / 2 + shakeX, Gdx.graphics.getHeight() / 2 + 40);
+            font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2 - 70 + shakeX, Gdx.graphics.getHeight() / 2);
+            font.draw(batch, "Tap to restart", Gdx.graphics.getWidth() / 2 - restartLayout.width / 2 + shakeX, Gdx.graphics.getHeight() / 2 - 50);
+            font.setColor(0.7f, 0.7f, 0.7f, 1f);
+            font.draw(batch, "Hold for menu", Gdx.graphics.getWidth() / 2 - 90 + shakeX, Gdx.graphics.getHeight() / 2 - 90);
+            font.setColor(1, 1, 1, 1);
         }
 
         batch.end();
 
-        if (Gdx.input.justTouched()) {
-            if (gameOver) {
-                resetGame();
-            } else if (!ready && !go) {
+        // Input handling
+        if (gameOver) {
+            if (Gdx.input.isTouched()) {
+                holdTimer += delta;
+                if (holdTimer >= HOLD_TIME_FOR_MENU) {
+                    game.setHighScore(score);
+                    game.setScreen(new MainMenuScreen(game));
+                    dispose();
+                    return;
+                }
+            } else {
+                if (holdTimer > 0 && holdTimer < HOLD_TIME_FOR_MENU) {
+                    game.setHighScore(score);
+                    resetGame();
+                }
+                holdTimer = 0;
+            }
+        } else if (Gdx.input.justTouched()) {
+            if (!ready && !go) {
                 rocketVelocity = 500f;
 
                 ParticleEffectPool.PooledEffect effect = particleEffects.obtain();
@@ -519,7 +525,6 @@ public class FirstScreen implements Screen {
 
         spikeTimer += delta;
 
-        // Проверяем превышение времени
         if (spikeTimer >= nextSpikeDelay) {
             spawnSpikes();
             spikeTimer = 0;
@@ -636,7 +641,6 @@ public class FirstScreen implements Screen {
     }
 
     private void checkCollisions() {
-        // Skip collision check if invulnerable
         if (invulnerabilityTimer > 0) {
             return;
         }
@@ -657,17 +661,14 @@ public class FirstScreen implements Screen {
             shakeTimer = 0.5f;
             shakeIntensity = 10f;
         } else {
-            // Give invulnerability and visual feedback
             invulnerabilityTimer = INVULNERABILITY_TIME;
             shakeTimer = 0.3f;
             shakeIntensity = 5f;
 
-            // Reset combo on hit
             combo = 0;
             comboTimer = 0;
             comboExpiring = false;
 
-            // Add visual feedback
             scorePopups.add(new ScorePopup("-1 life", rocketRect.x, rocketRect.y + rocketRect.height, false));
         }
     }
