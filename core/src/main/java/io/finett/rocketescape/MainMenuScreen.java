@@ -58,19 +58,25 @@ public class MainMenuScreen implements Screen {
         background = new Texture("space-bg.png");
         rocket = new Texture("rocket.png");
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        // Safe font generation with try-finally
+        FreeTypeFontGenerator generator = null;
+        try {
+            generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        parameter.size = 48;
-        titleFont = generator.generateFont(parameter);
+            parameter.size = 48;
+            titleFont = generator.generateFont(parameter);
 
-        parameter.size = 20;
-        menuFont = generator.generateFont(parameter);
+            parameter.size = 20;
+            menuFont = generator.generateFont(parameter);
 
-        parameter.size = 14;
-        smallFont = generator.generateFont(parameter);
-
-        generator.dispose();
+            parameter.size = 14;
+            smallFont = generator.generateFont(parameter);
+        } finally {
+            if (generator != null) {
+                generator.dispose();
+            }
+        }
 
         titleLayout = new GlyphLayout();
         playLayout = new GlyphLayout();

@@ -48,16 +48,22 @@ public class SettingsScreen implements Screen {
         shapeRenderer = new ShapeRenderer();
         background = new Texture("space-bg.png");
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        // Safe font generation with try-finally
+        FreeTypeFontGenerator generator = null;
+        try {
+            generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        parameter.size = 36;
-        titleFont = generator.generateFont(parameter);
+            parameter.size = 36;
+            titleFont = generator.generateFont(parameter);
 
-        parameter.size = 16;
-        menuFont = generator.generateFont(parameter);
-
-        generator.dispose();
+            parameter.size = 16;
+            menuFont = generator.generateFont(parameter);
+        } finally {
+            if (generator != null) {
+                generator.dispose();
+            }
+        }
 
         titleLayout = new GlyphLayout();
         soundLayout = new GlyphLayout();

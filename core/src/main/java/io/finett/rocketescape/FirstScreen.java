@@ -212,14 +212,21 @@ public class FirstScreen implements Screen {
         spikeWidth = Gdx.graphics.getWidth() * 0.08f;
         spikeGap = Gdx.graphics.getHeight() * 0.25f;
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 24;
-        font = generator.generateFont(parameter);
+        // Safe font generation with try-finally
+        FreeTypeFontGenerator generator = null;
+        try {
+            generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
+            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            parameter.size = 24;
+            font = generator.generateFont(parameter);
 
-        parameter.size = 32;
-        comboFont = generator.generateFont(parameter);
-        generator.dispose();
+            parameter.size = 32;
+            comboFont = generator.generateFont(parameter);
+        } finally {
+            if (generator != null) {
+                generator.dispose();
+            }
+        }
 
         // Initialize cached GlyphLayouts
         comboLayout = new GlyphLayout();
@@ -481,6 +488,7 @@ public class FirstScreen implements Screen {
             if (Gdx.input.isTouched()) {
                 holdTimer += delta;
                 if (holdTimer >= HOLD_TIME_FOR_MENU) {
+                    holdTimer = 0; // Reset timer to prevent overflow
                     game.setHighScore(score);
                     game.setScreen(new MainMenuScreen(game));
                     dispose();
