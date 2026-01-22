@@ -64,9 +64,18 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo 'CHANGELOG<<EOF'
+            # Check if previous tag exists
+            if PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null); then
+              git log --pretty=format:"- %s (%h)" "${PREV_TAG}..HEAD" 2>/dev/null || echo "- Initial release"
+            else
+              # No previous tag, list recent commits or show initial release
+              git log --pretty=format:"- %s (%h)" -10 2>/dev/null || echo "- Initial release"
+            fi
+            echo ""  # ✅ Ensure newline before EOF
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
