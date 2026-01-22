@@ -1,32 +1,58 @@
-# 🚀 Rocket Escape
+<div align="center">
+   <img width="256" height="256" alt="Rocket Escape Logo" src="https://github.com/user-attachments/assets/f865895a-5b88-4e1e-b034-2af9cfa4f1da" />
+   
+   # 🚀 Rocket Escape
+   
+   **A fast-paced arcade game where you navigate a rocket through obstacles to escape!**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Java 8+](https://img.shields.io/badge/Java-8+-blue.svg)](https://www.oracle.com/java/)
-[![LibGDX](https://img.shields.io/badge/LibGDX-1.14.0-green.svg)](https://libgdx.com/)
-[![Platforms](https://img.shields.io/badge/Platforms-Desktop%20%7C%20Android%20%7C%20Web-lightgrey.svg)](https://libgdx.com/overview.html)
+   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+   [![Java 8+](https://img.shields.io/badge/Java-8+-blue.svg)](https://www.oracle.com/java/)
+   [![LibGDX](https://img.shields.io/badge/LibGDX-1.14.0-green.svg)](https://libgdx.com/)
+   [![Platforms](https://img.shields.io/badge/Platforms-Desktop%20%7C%20Android%20%7C%20Web-lightgrey.svg)](https://libgdx.com/overview.html)
 
-A fast-paced arcade game where you navigate a rocket through obstacles to escape!
+   [Features](#-features) • [Getting Started](#-getting-started) • [Controls](#-game-controls) • [Contributing](#-contributing)
+
+</div>
 
 ---
 
-## 🎮 Features
+## 📋 Table of Contents
 
-✨ **Combo System** - Chain successful maneuvers for bonus points and score multipliers
-🔥 **Lives System** - 3 lives with invulnerability after hits
-📈 **Progressive Difficulty** - Game gets harder as you score more points
-🎯 **Score Multiplier** - Build longer combos to increase your multiplier
-⚡ **Visual Effects** - Particle trails, screen shake, and flashing indicators
-🏆 **High Scores** - Compete against your best performance
+- [Features](#-features)
+- [Technology Stack](#-technology-stack)
+- [Getting Started](#-getting-started)
+- [Game Controls](#-game-controls)
+- [Gameplay Guide](#-gameplay-guide)
+- [Project Structure](#-project-structure)
+- [Building & Running](#-building--running)
+- [Recent Updates](#-recent-updates)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔗 **Combo System** | Chain successful maneuvers for bonus points and score multipliers |
+| ❤️ **Lives System** | 3 lives with invulnerability period after hits |
+| 📈 **Progressive Difficulty** | Game intensity increases as your score grows |
+| 🎯 **Score Multiplier** | Build longer combos to maximize your score |
+| ⚡ **Visual Effects** | Particle trails, screen shake, and flashing indicators |
+| 🏆 **High Scores** | Track and compete against your best performance |
+| 🎵 **Dynamic Obstacles** | Variable spacing for unpredictable gameplay |
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **[LibGDX](https://libgdx.com/)** - Cross-platform game development framework
-- **Java 8+** - Primary programming language
-- **Gradle** - Build automation
-- **LWJGL3** - Desktop backend
-- **Particle Effects** - Smooth visual feedback
+| Technology | Purpose |
+|------------|---------|
+| **[LibGDX](https://libgdx.com/)** | Cross-platform game development framework |
+| **Java 8+** | Primary programming language |
+| **Gradle** | Build automation & dependency management |
+| **LWJGL3** | Desktop backend renderer |
 
 ---
 
@@ -34,44 +60,53 @@ A fast-paced arcade game where you navigate a rocket through obstacles to escape
 
 ### Prerequisites
 
-- Java JDK 8 or higher
-- Git
+- ☕ Java JDK 8 or higher
+- 📦 Git
 
-### Installation
+### Quick Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/finettt/Rocket-Escape.git
-   ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/finettt/Rocket-Escape.git
 
-2. **Navigate to the project directory:**
-   ```bash
-   cd Rocket-Escape
-   ```
+# 2. Navigate to project directory
+cd Rocket-Escape
 
-3. **Run the game:**
-   ```bash
-   ./gradlew desktop:run
-   ```
-   *(On Windows, use `gradlew.bat desktop:run`)*
+# 3. Run the game
+./gradlew desktop:run
+```
+
+> **Windows Users:** Use `gradlew.bat desktop:run` instead
 
 ---
 
-## 🎯 Game Controls
+## 🎮 Game Controls
 
-🖱️ **Touch/Click** - Launch and accelerate the rocket
-📱 **On-screen tap** - Tap anywhere to control the rocket
+| Platform | Control | Action |
+|----------|---------|--------|
+| 🖥️ Desktop | Mouse Click | Launch and accelerate rocket |
+| 📱 Mobile | Touch/Tap | Control rocket movement |
 
 ---
 
 ## 📖 Gameplay Guide
 
-1. **Navigate your rocket** through the obstacle course
-2. **Complete maneuvers** to build combos
-3. **Watch for combo timers** - flashing effect warns when combo is expiring
-4. **Aim for high scores** with maximum combo multipliers
-5. **Use your 3 lives wisely** - you get brief invulnerability after hits
-6. **Survive longer** - the game gets progressively harder as you score more
+```
+┌─────────────────────────────────────────────────────┐
+│  1. 🚀 Navigate your rocket through obstacles       │
+│  2. ⭐ Complete maneuvers to build combos           │
+│  3. ⏱️  Watch combo timers - flashing warns expiry  │
+│  4. 🎯 Maximize combo multipliers for high scores   │
+│  5. ❤️ Use 3 lives wisely - invulnerability on hit  │
+│  6. 📈 Survive longer - difficulty increases!       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Tips & Tricks
+
+- 💡 **Timing is key** - tap at the right moment to avoid obstacles
+- 🔥 **Maintain combos** - don't let the combo timer run out
+- 🛡️ **Use invulnerability** - after a hit, you have a brief window of safety
 
 ---
 
@@ -79,76 +114,105 @@ A fast-paced arcade game where you navigate a rocket through obstacles to escape
 
 ```
 RocketEscape/
-├── core/              # Main game logic (shared across platforms)
+├── 📂 core/                    # Shared game logic
 │   └── src/main/java/io/finett/rocketescape/
-│       ├── Main.java          # Game entry point & state management
-│       ├── FirstScreen.java   # Main gameplay screen
+│       ├── Main.java           # Entry point & state management
+│       ├── FirstScreen.java    # Main gameplay screen
 │       ├── MainMenuScreen.java # Menu system
 │       └── SettingsScreen.java # Settings menu
-├── desktop/           # Desktop platform implementation
-├── android/           # Android platform implementation
-├── lwjgl3/            # LWJGL3 desktop backend
-├── assets/            # Game resources
-│   ├── space-bg.png     # Background
-│   ├── rocket.png       # Rocket sprite
-│   ├── spike_1-5.png    # Obstacle sprites
-│   ├── PressStart2P-Regular.ttf # Pixel font
-│   └── particles/       # Particle effects
-└── README.md
+│
+├── 📂 desktop/                 # Desktop implementation
+├── 📂 android/                 # Android implementation
+├── 📂 lwjgl3/                  # LWJGL3 backend
+│
+├── 📂 assets/                  # Game resources
+│   ├── 🖼️ space-bg.png        # Background image
+│   ├── 🚀 rocket.png          # Rocket sprite
+│   ├── ⚠️ spike_1-5.png       # Obstacle sprites
+│   ├── 🔤 PressStart2P-Regular.ttf
+│   └── ✨ particles/           # Particle effects
+│
+└── 📄 README.md
 ```
 
 ---
 
-## 🎮 Running the Game
+## 🔨 Building & Running
 
-### Desktop Version
+### Desktop
 
 ```bash
-# Run the game
+# Run directly
 ./gradlew desktop:run
 
-# Build distributable
+# Create distributable JAR
 ./gradlew desktop:dist
+# Output: desktop/build/libs/
 ```
 
-### Android Version
+### Android
 
 ```bash
 # Build debug APK
 ./gradlew android:assembleDebug
+# Output: android/build/outputs/apk/debug/
 
-# APK location: android/build/outputs/apk/debug/
+# Build release APK
+./gradlew android:assembleRelease
 ```
 
-### Web Version
+### Web (HTML5)
 
 ```bash
-# Build HTML5 version
+# Build web version
 ./gradlew html:dist
+# Output: html/build/dist/
 ```
 
 ---
 
-## 💡 Recent Updates
+## 🆕 Recent Updates
 
-🆕 **New Features:**
-- Lives system with 3 lives and invulnerability after hits
-- Progressive difficulty - game gets harder as you score more
-- Variable obstacle spacing for dynamic gameplay
-- Enhanced visual feedback with screen shake and particle effects
+### Latest Changes
+- ❤️ **Lives System** - 3 lives with invulnerability after hits
+- 📈 **Progressive Difficulty** - Dynamic difficulty scaling
+- 🎲 **Variable Obstacle Spacing** - More unpredictable gameplay
+- ✨ **Enhanced Visuals** - Screen shake and improved particles
+
+### Roadmap
+- [ ] 🎵 Sound effects and music
+- [ ] 🌟 Power-ups system
+- [ ] 🏅 Achievement system
+- [ ] 🌐 Online leaderboards
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. 🍴 **Fork** the repository
+2. 🌿 **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. 💾 **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. 📤 **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. 🔃 **Open** a Pull Request
+
+> For major changes, please open an issue first to discuss your ideas.
 
 ---
 
 ## 📜 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🔧 Contributing
+<div align="center">
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
-
----
+### 🌟 Star this repo if you enjoyed the game! 🌟
 
 **🚀 Have fun escaping! 🚀**
+
+Made with ❤️ using LibGDX
+
+</div>
