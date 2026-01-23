@@ -32,6 +32,7 @@ public class MainMenuScreen implements Screen {
     private Rectangle playButton;
     private Rectangle settingsButton;
     private Rectangle exitButton;
+    private Rectangle achievementsButton;
 
     private float rocketY;
     private float rocketAnimTimer;
@@ -83,19 +84,21 @@ public class MainMenuScreen implements Screen {
         settingsLayout = new GlyphLayout();
         highScoreLayout = new GlyphLayout();
         exitLayout = new GlyphLayout();
-
+        GlyphLayout achievementsLayout = new GlyphLayout();
         titleLayout.setText(titleFont, "ROCKET ESCAPE");
         playLayout.setText(menuFont, "PLAY");
         settingsLayout.setText(menuFont, "SETTINGS");
         exitLayout.setText(menuFont, "EXIT");
 
+        achievementsLayout.setText(menuFont, "ACHIEVEMENTS");
+
         float centerX = Gdx.graphics.getWidth() / 2f;
         float startY = Gdx.graphics.getHeight() / 2f;
 
         playButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY, BUTTON_WIDTH, BUTTON_HEIGHT);
-        settingsButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY - BUTTON_HEIGHT - BUTTON_SPACING, BUTTON_WIDTH, BUTTON_HEIGHT);
-        exitButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 2, BUTTON_WIDTH, BUTTON_HEIGHT);
-
+        achievementsButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY - BUTTON_HEIGHT - BUTTON_SPACING, BUTTON_WIDTH, BUTTON_HEIGHT);
+        settingsButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 2, BUTTON_WIDTH, BUTTON_HEIGHT);
+        exitButton = new Rectangle(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 3, BUTTON_WIDTH, BUTTON_HEIGHT);
         starX = new float[STAR_COUNT];
         starY = new float[STAR_COUNT];
         starSpeed = new float[STAR_COUNT];
@@ -132,6 +135,7 @@ public class MainMenuScreen implements Screen {
         float touchY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
         boolean playHover = playButton.contains(touchX, touchY);
+        boolean achievementsHover = achievementsButton.contains(touchX, touchY);
         boolean settingsHover = settingsButton.contains(touchX, touchY);
         boolean exitHover = exitButton.contains(touchX, touchY);
 
@@ -154,6 +158,7 @@ public class MainMenuScreen implements Screen {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         drawButton(playButton, playHover);
+        drawButton(achievementsButton, achievementsHover);
         drawButton(settingsButton, settingsHover);
         drawButton(exitButton, exitHover);
         shapeRenderer.end();
@@ -175,6 +180,10 @@ public class MainMenuScreen implements Screen {
         float playTextX = playButton.x + (playButton.width - playLayout.width) / 2;
         float playTextY = playButton.y + (playButton.height + playLayout.height) / 2;
         menuFont.draw(batch, "PLAY", playTextX, playTextY);
+        GlyphLayout achievementsLayout = new GlyphLayout(menuFont, "ACHIEVEMENTS");
+        float achievementsTextX = achievementsButton.x + (achievementsButton.width - achievementsLayout.width) / 2;
+        float achievementsTextY = achievementsButton.y + (achievementsButton.height + achievementsLayout.height) / 2;
+        menuFont.draw(batch, "ACHIEVEMENTS", achievementsTextX, achievementsTextY);
 
         float settingsTextX = settingsButton.x + (settingsButton.width - settingsLayout.width) / 2;
         float settingsTextY = settingsButton.y + (settingsButton.height + settingsLayout.height) / 2;
@@ -199,6 +208,9 @@ public class MainMenuScreen implements Screen {
         if (Gdx.input.justTouched()) {
             if (playHover) {
                 game.setScreen(new FirstScreen(game));
+                dispose();
+            } else if (achievementsHover) {
+                game.setScreen(new AchievementsScreen(game));
                 dispose();
             } else if (settingsHover) {
                 game.setScreen(new SettingsScreen(game));
@@ -226,8 +238,9 @@ public class MainMenuScreen implements Screen {
         float startY = height / 2f;
 
         playButton.setPosition(centerX - BUTTON_WIDTH / 2, startY);
-        settingsButton.setPosition(centerX - BUTTON_WIDTH / 2, startY - BUTTON_HEIGHT - BUTTON_SPACING);
-        exitButton.setPosition(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 2);
+        achievementsButton.setPosition(centerX - BUTTON_WIDTH / 2, startY - BUTTON_HEIGHT - BUTTON_SPACING);
+        settingsButton.setPosition(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 2);
+        exitButton.setPosition(centerX - BUTTON_WIDTH / 2, startY - (BUTTON_HEIGHT + BUTTON_SPACING) * 3);
     }
 
     @Override

@@ -140,6 +140,13 @@ public class FirstScreen implements Screen {
     private int scoreMultiplier;
     private boolean initialized = false;
 
+    // Achievements tracking
+    private boolean damageThisRun;
+    private Array<Achievement> justUnlocked;
+    private Achievement currentDisplayAchievement;
+    private float achievementDisplayTimer;
+    private static final float ACHIEVEMENT_DISPLAY_TIME = 3.0f;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
@@ -206,6 +213,7 @@ public class FirstScreen implements Screen {
             }
         }
     }
+
     private class PowerUp {
         Rectangle rect;
         PowerUpType type;
@@ -217,6 +225,7 @@ public class FirstScreen implements Screen {
             this.animTimer = 0;
         }
     }
+
     public FirstScreen(Main game) {
         this.game = game;
     }
@@ -274,6 +283,7 @@ public class FirstScreen implements Screen {
 
             activePowerUps = new Array<PowerUp>();
             powerUpsOnScreen = new Array<PowerUp>();
+            justUnlocked = new Array<Achievement>();
 
             particleEffect = new ParticleEffect();
             particleEffect.load(Gdx.files.internal("particles/rocket-trail.p"), Gdx.files.internal("particles"));
@@ -324,6 +334,13 @@ public class FirstScreen implements Screen {
         powerUpSpawnTimer = 0;
         slowTimeMultiplier = 1.0f;
         scoreMultiplier = 1;
+        damageThisRun = false;
+        achievementDisplayTimer = 0;
+        currentDisplayAchievement = null;
+
+        // Track game played
+        game.incrementGamesPlayed();
+        checkAchievement(Achievement.FIRST_FLIGHT);
 
         float rocketWidth = ROCKET_SIZE;
         float rocketHeight = ROCKET_SIZE * ((float)rocket.getHeight() / rocket.getWidth());
@@ -333,6 +350,7 @@ public class FirstScreen implements Screen {
         scorePopups.clear();
         activePowerUps.clear();
         powerUpsOnScreen.clear();
+        justUnlocked.clear();
     }
 
     private float getRandomSpikeDelay() {
@@ -343,6 +361,11 @@ public class FirstScreen implements Screen {
 
     private void updateDifficulty() {
         difficultyMultiplier = Math.min(MAX_DIFFICULTY, 1.0f + (score * DIFFICULTY_INCREASE_RATE));
+
+        // Check speed demon achievement
+        if (difficultyMultiplier >= 2.0f) {
+            checkAchievement(Achievement.SPEED_DEMON);
+        }
     }
 
     private float getCurrentSpikeSpeed() {
@@ -505,11 +528,10 @@ public class FirstScreen implements Screen {
         batch.end();
 
         // Draw active power-ups UI with progress bars
-        // Draw active power-ups UI with progress bars
         float powerUpUIX = UI_MARGIN + shakeX;
         float powerUpUIY = Gdx.graphics.getHeight() - 100;
 
-// Pre-calculate text widths for proper background sizing
+        // Pre-calculate text widths for proper background sizing
         Array<Float> textWidths = new Array<>();
         GlyphLayout tempLayout = new GlyphLayout();
         for (PowerUp powerUp : activePowerUps) {
@@ -634,6 +656,59 @@ public class FirstScreen implements Screen {
             font.setColor(1, 1, 1, 1);
         }
 
+        // Display achievement notification
+        if (currentDisplayAchievement != null && achievementDisplayTimer > 0) {
+            float alpha = achievementDisplayTimer < 0.5f ? achievementDisplayTimer * 2 : 1f;
+
+            // Calculate adaptive box width based on text
+            GlyphLayout achievementTitleLayout = new GlyphLayout(font, "ACHIEVEMENT UNLOCKED!");
+            GlyphLayout achievementNameLayout = new GlyphLayout(font, currentDisplayAchievement.getName());
+
+            float padding = 40f;
+            float minBoxWidth = 300f;
+            float maxBoxWidth = Gdx.graphics.getWidth() - 40f; // Leave 20px margin on each side
+
+            float titleWidth = achievementTitleLayout.width + padding;
+            float nameWidth = achievementNameLayout.width + padding;
+            float boxWidth = Math.max(minBoxWidth, Math.max(titleWidth, nameWidth));
+            boxWidth = Math.min(boxWidth, maxBoxWidth); // Don't exceed screen width
+
+            float boxHeight = 80;
+            float boxX = Gdx.graphics.getWidth() / 2f - boxWidth / 2f;
+            float boxY = Gdx.graphics.getHeight() - 150;
+
+            batch.end();
+
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            // Background
+            shapeRenderer.setColor(1f, 0.84f, 0f, 0.9f * alpha);
+            shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight);
+            shapeRenderer.end();
+
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            // Border
+            shapeRenderer.setColor(1f, 1f, 1f, alpha);
+            Gdx.gl.glLineWidth(3);
+            shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight);
+            Gdx.gl.glLineWidth(1);
+            shapeRenderer.end();
+
+            batch.begin();
+
+            font.setColor(0, 0, 0, alpha);
+
+            // Center text within the adaptive box
+            font.draw(batch, "ACHIEVEMENT UNLOCKED!",
+                boxX + (boxWidth - achievementTitleLayout.width) / 2f,
+                boxY + boxHeight - 15);
+
+            font.draw(batch, currentDisplayAchievement.getName(),
+                boxX + (boxWidth - achievementNameLayout.width) / 2f,
+                boxY + boxHeight - 50);
+
+            font.setColor(1, 1, 1, 1);
+        }
+
         batch.end();
 
         // Input handling
@@ -685,6 +760,7 @@ public class FirstScreen implements Screen {
         updateComboTimer(delta);
         updateDifficulty();
         updatePowerUps(delta);
+        updateAchievementDisplay(delta);
 
         spikeTimer += delta;
 
@@ -741,6 +817,10 @@ public class FirstScreen implements Screen {
         }
         if (combo > maxCombo) {
             maxCombo = combo;
+            game.updateMaxCombo(maxCombo);
+
+            checkAchievement(Achievement.COMBO_MASTER_10);
+            checkAchievement(Achievement.COMBO_MASTER_25);
         }
         comboTimer = COMBO_TIMEOUT;
         comboExpiring = false;
@@ -754,6 +834,16 @@ public class FirstScreen implements Screen {
             int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER * scoreMultiplier;
             pointsEarned += bonusPoints;
             scorePopups.add(new ScorePopup("+" + bonusPoints + " COMBO!", rocketRect.x, rocketRect.y + rocketRect.height + 30, true));
+        }
+
+        // Check score achievements
+        checkAchievement(Achievement.SURVIVOR_50);
+        checkAchievement(Achievement.SURVIVOR_100);
+        checkAchievement(Achievement.SURVIVOR_200);
+
+        // Check no damage achievement
+        if (!damageThisRun) {
+            checkAchievement(Achievement.NO_DAMAGE);
         }
 
         return pointsEarned;
@@ -818,6 +908,7 @@ public class FirstScreen implements Screen {
 
     private void handleCollision() {
         lives--;
+        damageThisRun = true;
 
         if (lives <= 0) {
             gameOver = true;
@@ -833,6 +924,11 @@ public class FirstScreen implements Screen {
             comboExpiring = false;
 
             scorePopups.add(new ScorePopup("-1 life", rocketRect.x, rocketRect.y + rocketRect.height, false));
+        }
+
+        // Check hardcore survivor achievement (50 points with only one hit)
+        if (lives == MAX_LIVES - 1 && score >= 50) {
+            checkAchievement(Achievement.HARDCORE_SURVIVOR);
         }
     }
 
@@ -925,6 +1021,8 @@ public class FirstScreen implements Screen {
         applyPowerUpEffect(type);
 
         scorePopups.add(new ScorePopup("+" + type.getName() + "!", rocketRect.x, rocketRect.y + rocketRect.height + 40, true));
+
+        checkAchievement(Achievement.POWERUP_COLLECTOR);
     }
 
     private void applyPowerUpEffect(PowerUpType type) {
@@ -955,6 +1053,63 @@ public class FirstScreen implements Screen {
                 break;
             case MAGNET:
                 break;
+        }
+    }
+
+    private void updateAchievementDisplay(float delta) {
+        if (achievementDisplayTimer > 0) {
+            achievementDisplayTimer -= delta;
+            if (achievementDisplayTimer <= 0) {
+                currentDisplayAchievement = null;
+            }
+        }
+    }
+
+    private void checkAchievement(Achievement achievement) {
+        if (game.isAchievementUnlocked(achievement)) {
+            return;
+        }
+
+        boolean unlock = false;
+
+        switch (achievement) {
+            case FIRST_FLIGHT:
+                unlock = game.getGamesPlayed() >= 1;
+                break;
+            case COMBO_MASTER_10:
+                unlock = maxCombo >= 10;
+                break;
+            case COMBO_MASTER_25:
+                unlock = maxCombo >= 25;
+                break;
+            case SURVIVOR_50:
+                unlock = score >= 50;
+                break;
+            case SURVIVOR_100:
+                unlock = score >= 100;
+                break;
+            case SURVIVOR_200:
+                unlock = score >= 200;
+                break;
+            case NO_DAMAGE:
+                unlock = !damageThisRun && score >= 30;
+                break;
+            case SPEED_DEMON:
+                unlock = difficultyMultiplier >= 2.0f;
+                break;
+            case POWERUP_COLLECTOR:
+                unlock = game.getTotalPowerups() >= 10;
+                break;
+            case HARDCORE_SURVIVOR:
+                unlock = lives == MAX_LIVES - 1 && score >= 50;
+                break;
+        }
+
+        if (unlock) {
+            game.unlockAchievement(achievement);
+            justUnlocked.add(achievement);
+            currentDisplayAchievement = achievement;
+            achievementDisplayTimer = ACHIEVEMENT_DISPLAY_TIME;
         }
     }
 
