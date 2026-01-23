@@ -207,7 +207,7 @@ public class MainMenuScreen implements Screen {
 
         if (Gdx.input.justTouched()) {
             if (playHover) {
-                game.setScreen(new FirstScreen(game));
+                game.setScreen(new GameModeSelectScreen(game));
                 dispose();
             } else if (achievementsHover) {
                 game.setScreen(new AchievementsScreen(game));

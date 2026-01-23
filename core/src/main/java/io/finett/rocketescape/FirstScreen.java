@@ -147,6 +147,11 @@ public class FirstScreen implements Screen {
     private float achievementDisplayTimer;
     private static final float ACHIEVEMENT_DISPLAY_TIME = 3.0f;
 
+    // Game Mode
+    private GameMode gameMode;
+    private float timeAttackTimer;
+    private static final float TIME_ATTACK_LIMIT = 60f;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
@@ -226,8 +231,15 @@ public class FirstScreen implements Screen {
         }
     }
 
+    // Default constructor (Classic mode)
     public FirstScreen(Main game) {
+        this(game, GameMode.CLASSIC);
+    }
+
+    // Constructor with GameMode
+    public FirstScreen(Main game, GameMode gameMode) {
         this.game = game;
+        this.gameMode = gameMode;
     }
 
     @Override
@@ -306,7 +318,6 @@ public class FirstScreen implements Screen {
             resetGame();
             initialized = true;
         }
-        // If already initialized, just resume - don't recreate anything
     }
 
     private void resetGame() {
@@ -314,7 +325,13 @@ public class FirstScreen implements Screen {
         rocketVelocity = 0;
         gravity = -15f;
         spikeTimer = 0;
-        difficultyMultiplier = 1.0f;
+
+        // Game Mode specific initialization
+        lives = gameMode.getLives();
+        difficultyMultiplier = gameMode.getStartingDifficulty();
+        timeAttackTimer = TIME_ATTACK_LIMIT;
+        scoreMultiplier = (gameMode == GameMode.HARDCORE) ? 2 : 1;
+
         nextSpikeDelay = getRandomSpikeDelay();
         score = 0;
         combo = 0;
@@ -328,12 +345,10 @@ public class FirstScreen implements Screen {
         goTimer = 0;
         shakeTimer = 0;
         shakeIntensity = 0;
-        lives = MAX_LIVES;
         invulnerabilityTimer = 0;
         holdTimer = 0;
         powerUpSpawnTimer = 0;
         slowTimeMultiplier = 1.0f;
-        scoreMultiplier = 1;
         damageThisRun = false;
         achievementDisplayTimer = 0;
         currentDisplayAchievement = null;
@@ -360,7 +375,7 @@ public class FirstScreen implements Screen {
     }
 
     private void updateDifficulty() {
-        difficultyMultiplier = Math.min(MAX_DIFFICULTY, 1.0f + (score * DIFFICULTY_INCREASE_RATE));
+        difficultyMultiplier = Math.min(MAX_DIFFICULTY, gameMode.getStartingDifficulty() + (score * DIFFICULTY_INCREASE_RATE));
 
         // Check speed demon achievement
         if (difficultyMultiplier >= 2.0f) {
@@ -521,6 +536,14 @@ public class FirstScreen implements Screen {
 
         font.draw(batch, "Score: " + score, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN);
 
+        // Draw Time Attack Timer
+        if (gameMode == GameMode.TIME_ATTACK && !gameOver) {
+            String timeText = String.format("%.1f", timeAttackTimer);
+            if (timeAttackTimer < 10) font.setColor(1, 0.3f, 0.3f, 1);
+            font.draw(batch, timeText, Gdx.graphics.getWidth() / 2f - 30 + shakeX, Gdx.graphics.getHeight() - UI_MARGIN);
+            font.setColor(1, 1, 1, 1);
+        }
+
         String difficultyText = String.format("x%.1f", difficultyMultiplier);
         difficultyLayout.setText(font, difficultyText);
         font.draw(batch, difficultyText, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN - 35);
@@ -531,25 +554,22 @@ public class FirstScreen implements Screen {
         float powerUpUIX = UI_MARGIN + shakeX;
         float powerUpUIY = Gdx.graphics.getHeight() - 100;
 
-        // Pre-calculate text widths for proper background sizing
         Array<Float> textWidths = new Array<>();
         GlyphLayout tempLayout = new GlyphLayout();
         for (PowerUp powerUp : activePowerUps) {
             String powerUpText = powerUp.type.getName() + " " + (int)Math.ceil(powerUp.animTimer) + "s";
             tempLayout.setText(font, powerUpText);
-            textWidths.add(tempLayout.width + 10); // +10 for padding
+            textWidths.add(tempLayout.width + 10);
         }
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         for (int i = 0; i < activePowerUps.size; i++) {
             PowerUp powerUp = activePowerUps.get(i);
-            float bgWidth = Math.max(100, textWidths.get(i)); // Minimum 100 pixels
+            float bgWidth = Math.max(100, textWidths.get(i));
 
-            // Background for power-up effect
             shapeRenderer.setColor(powerUp.type.getColorR(), powerUp.type.getColorG(), powerUp.type.getColorB(), 0.7f);
             shapeRenderer.rect(powerUpUIX, powerUpUIY, bgWidth, 30);
 
-            // Time progress bar
             float progress = powerUp.animTimer / powerUp.type.getDuration();
             shapeRenderer.setColor(1, 1, 1, 0.3f);
             shapeRenderer.rect(powerUpUIX, powerUpUIY, bgWidth * progress, 4);
@@ -560,13 +580,11 @@ public class FirstScreen implements Screen {
 
         batch.begin();
 
-        // Draw power-up names and timers
         powerUpUIY = Gdx.graphics.getHeight() - 100;
         for (PowerUp powerUp : activePowerUps) {
             font.setColor(1, 1, 1, 1);
             String powerUpText = powerUp.type.getName() + " " + (int)Math.ceil(powerUp.animTimer) + "s";
 
-            // Red color when expiring soon
             if (powerUp.animTimer < 3) {
                 font.setColor(1, 0.3f, 0.3f, 1);
             }
@@ -597,13 +615,11 @@ public class FirstScreen implements Screen {
 
         batch.end();
 
-        // Draw pause button (only when game is active)
         if (!ready && !go && !gameOver) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.7f);
             shapeRenderer.rect(pauseButton.x, pauseButton.y, pauseButton.width, pauseButton.height);
 
-            // Draw pause icon (two vertical bars)
             shapeRenderer.setColor(1, 1, 1, 0.9f);
             float barWidth = pauseButton.width * 0.25f;
             float barHeight = pauseButton.height * 0.6f;
@@ -614,12 +630,18 @@ public class FirstScreen implements Screen {
             shapeRenderer.end();
         }
 
-        float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
-        float heartY = Gdx.graphics.getHeight() - UI_MARGIN - HEART_SIZE - 10;
+        // Draw lives (hearts) - only if lives are finite (not ZEN mode)
+        if (gameMode != GameMode.ZEN) {
+            float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
+            float heartY = Gdx.graphics.getHeight() - UI_MARGIN - HEART_SIZE - 10;
 
-        for (int i = 0; i < MAX_LIVES; i++) {
-            boolean filled = (i < lives);
-            drawHeart(heartStartX + i * HEART_SPACING + shakeX, heartY, HEART_SIZE, filled);
+            // In hardcore we only show 1 life, in Classic/TimeAttack we show 3
+            int displayLives = (gameMode == GameMode.HARDCORE) ? 1 : MAX_LIVES;
+
+            for (int i = 0; i < displayLives; i++) {
+                boolean filled = (i < lives);
+                drawHeart(heartStartX + i * HEART_SPACING + shakeX, heartY, HEART_SIZE, filled);
+            }
         }
 
         if (combo >= 2 && !gameOver && shapeRenderer != null) {
@@ -660,18 +682,17 @@ public class FirstScreen implements Screen {
         if (currentDisplayAchievement != null && achievementDisplayTimer > 0) {
             float alpha = achievementDisplayTimer < 0.5f ? achievementDisplayTimer * 2 : 1f;
 
-            // Calculate adaptive box width based on text
             GlyphLayout achievementTitleLayout = new GlyphLayout(font, "ACHIEVEMENT UNLOCKED!");
             GlyphLayout achievementNameLayout = new GlyphLayout(font, currentDisplayAchievement.getName());
 
             float padding = 40f;
             float minBoxWidth = 300f;
-            float maxBoxWidth = Gdx.graphics.getWidth() - 40f; // Leave 20px margin on each side
+            float maxBoxWidth = Gdx.graphics.getWidth() - 40f;
 
             float titleWidth = achievementTitleLayout.width + padding;
             float nameWidth = achievementNameLayout.width + padding;
             float boxWidth = Math.max(minBoxWidth, Math.max(titleWidth, nameWidth));
-            boxWidth = Math.min(boxWidth, maxBoxWidth); // Don't exceed screen width
+            boxWidth = Math.min(boxWidth, maxBoxWidth);
 
             float boxHeight = 80;
             float boxX = Gdx.graphics.getWidth() / 2f - boxWidth / 2f;
@@ -680,13 +701,11 @@ public class FirstScreen implements Screen {
             batch.end();
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            // Background
             shapeRenderer.setColor(1f, 0.84f, 0f, 0.9f * alpha);
             shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight);
             shapeRenderer.end();
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            // Border
             shapeRenderer.setColor(1f, 1f, 1f, alpha);
             Gdx.gl.glLineWidth(3);
             shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight);
@@ -696,8 +715,6 @@ public class FirstScreen implements Screen {
             batch.begin();
 
             font.setColor(0, 0, 0, alpha);
-
-            // Center text within the adaptive box
             font.draw(batch, "ACHIEVEMENT UNLOCKED!",
                 boxX + (boxWidth - achievementTitleLayout.width) / 2f,
                 boxY + boxHeight - 15);
@@ -730,7 +747,6 @@ public class FirstScreen implements Screen {
                 holdTimer = 0;
             }
         } else if (Gdx.input.justTouched()) {
-            // Don't jump when clicking pause button
             if (!ready && !go && !pauseButton.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY())) {
                 rocketVelocity = 500f;
 
@@ -755,6 +771,17 @@ public class FirstScreen implements Screen {
             rocketRect.y = Gdx.graphics.getHeight() - rocketRect.height;
             rocketY = Gdx.graphics.getHeight() - rocketRect.height;
             rocketVelocity = 0;
+        }
+
+        // Time Attack Logic
+        if (gameMode == GameMode.TIME_ATTACK) {
+            timeAttackTimer -= delta;
+            if (timeAttackTimer <= 0) {
+                timeAttackTimer = 0;
+                gameOver = true;
+                shakeTimer = 0.5f;
+                shakeIntensity = 5f;
+            }
         }
 
         updateComboTimer(delta);
@@ -907,6 +934,18 @@ public class FirstScreen implements Screen {
     }
 
     private void handleCollision() {
+        // ZEN MODE: No death, just screen shake and combo reset
+        if (gameMode == GameMode.ZEN) {
+            shakeTimer = 0.3f;
+            shakeIntensity = 5f;
+            combo = 0;
+            comboTimer = 0;
+            comboExpiring = false;
+            scorePopups.add(new ScorePopup("Ouch!", rocketRect.x, rocketRect.y + rocketRect.height, false));
+            // No lives decrement, no game over
+            return;
+        }
+
         lives--;
         damageThisRun = true;
 
@@ -926,8 +965,8 @@ public class FirstScreen implements Screen {
             scorePopups.add(new ScorePopup("-1 life", rocketRect.x, rocketRect.y + rocketRect.height, false));
         }
 
-        // Check hardcore survivor achievement (50 points with only one hit)
-        if (lives == MAX_LIVES - 1 && score >= 50) {
+        // Check hardcore survivor achievement
+        if (gameMode == GameMode.HARDCORE && score >= 50) {
             checkAchievement(Achievement.HARDCORE_SURVIVOR);
         }
     }
@@ -1111,6 +1150,11 @@ public class FirstScreen implements Screen {
             currentDisplayAchievement = achievement;
             achievementDisplayTimer = ACHIEVEMENT_DISPLAY_TIME;
         }
+    }
+
+    // Getter for PauseMenuScreen restart functionality
+    public GameMode getGameMode() {
+        return gameMode;
     }
 
     @Override
