@@ -131,6 +131,15 @@ public class FirstScreen implements Screen {
     private static final float PAUSE_BUTTON_SIZE = 50f;
     private static final float PAUSE_BUTTON_MARGIN = 10f;
 
+    // Power-ups
+    private Array<PowerUp> activePowerUps;
+    private Array<PowerUp> powerUpsOnScreen;
+    private float powerUpSpawnTimer;
+    private static final float POWERUP_SPAWN_INTERVAL = 15f;
+    private float slowTimeMultiplier;
+    private int scoreMultiplier;
+    private boolean initialized = false;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
@@ -197,77 +206,97 @@ public class FirstScreen implements Screen {
             }
         }
     }
+    private class PowerUp {
+        Rectangle rect;
+        PowerUpType type;
+        float animTimer;
 
+        public PowerUp(float x, float y, PowerUpType type) {
+            this.rect = new Rectangle(x, y, 40, 40);
+            this.type = type;
+            this.animTimer = 0;
+        }
+    }
     public FirstScreen(Main game) {
         this.game = game;
     }
 
     @Override
     public void show() {
-        batch = new SpriteBatch();
-        shapeRenderer = new ShapeRenderer();
-        background = new Texture("space-bg.png");
-        rocket = new Texture("rocket.png");
+        // Only initialize resources once
+        if (!initialized) {
+            batch = new SpriteBatch();
+            shapeRenderer = new ShapeRenderer();
+            background = new Texture("space-bg.png");
+            rocket = new Texture("rocket.png");
 
-        spikes = new Texture[5];
-        for (int i = 0; i < 5; i++) {
-            spikes[i] = new Texture("spike_" + (i + 1) + ".png");
-        }
-
-        spikeWidth = Gdx.graphics.getWidth() * 0.08f;
-        spikeGap = Gdx.graphics.getHeight() * 0.25f;
-
-        // Safe font generation with try-finally
-        FreeTypeFontGenerator generator = null;
-        try {
-            generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
-            FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            parameter.size = 24;
-            font = generator.generateFont(parameter);
-
-            parameter.size = 32;
-            comboFont = generator.generateFont(parameter);
-        } finally {
-            if (generator != null) {
-                generator.dispose();
+            spikes = new Texture[5];
+            for (int i = 0; i < 5; i++) {
+                spikes[i] = new Texture("spike_" + (i + 1) + ".png");
             }
-        }
 
-        // Initialize cached GlyphLayouts
-        comboLayout = new GlyphLayout();
-        readyLayout = new GlyphLayout();
-        goLayout = new GlyphLayout();
-        gameOverLayout = new GlyphLayout();
-        restartLayout = new GlyphLayout();
-        difficultyLayout = new GlyphLayout();
+            spikeWidth = Gdx.graphics.getWidth() * 0.08f;
+            spikeGap = Gdx.graphics.getHeight() * 0.25f;
 
-        // Pre-compute static text layouts
-        readyLayout.setText(font, "READY?");
-        goLayout.setText(font, "GO!");
-        gameOverLayout.setText(font, "GAME OVER");
-        restartLayout.setText(font, "Tap to restart");
+            // Safe font generation with try-finally
+            FreeTypeFontGenerator generator = null;
+            try {
+                generator = new FreeTypeFontGenerator(Gdx.files.internal("PressStart2P-Regular.ttf"));
+                FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+                parameter.size = 24;
+                font = generator.generateFont(parameter);
 
-        rocketRect = new Rectangle();
-        spikeData = new Array<SpikeData>();
-        scorePopups = new Array<ScorePopup>();
-
-        particleEffect = new ParticleEffect();
-        particleEffect.load(Gdx.files.internal("particles/rocket-trail.p"), Gdx.files.internal("particles"));
-        particleEffectPool = new ParticleEffectPool(particleEffect, 1, 10);
-        particleEffects = new Pool<ParticleEffectPool.PooledEffect>() {
-            @Override
-            protected ParticleEffectPool.PooledEffect newObject() {
-                return particleEffectPool.obtain();
+                parameter.size = 32;
+                comboFont = generator.generateFont(parameter);
+            } finally {
+                if (generator != null) {
+                    generator.dispose();
+                }
             }
-        };
-        // Initialize pause button
-        pauseButton = new Rectangle(
-            Gdx.graphics.getWidth() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
-            Gdx.graphics.getHeight() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
-            PAUSE_BUTTON_SIZE,
-            PAUSE_BUTTON_SIZE
-        );
-        resetGame();
+
+            // Initialize cached GlyphLayouts
+            comboLayout = new GlyphLayout();
+            readyLayout = new GlyphLayout();
+            goLayout = new GlyphLayout();
+            gameOverLayout = new GlyphLayout();
+            restartLayout = new GlyphLayout();
+            difficultyLayout = new GlyphLayout();
+
+            // Pre-compute static text layouts
+            readyLayout.setText(font, "READY?");
+            goLayout.setText(font, "GO!");
+            gameOverLayout.setText(font, "GAME OVER");
+            restartLayout.setText(font, "Tap to restart");
+
+            rocketRect = new Rectangle();
+            spikeData = new Array<SpikeData>();
+            scorePopups = new Array<ScorePopup>();
+
+            activePowerUps = new Array<PowerUp>();
+            powerUpsOnScreen = new Array<PowerUp>();
+
+            particleEffect = new ParticleEffect();
+            particleEffect.load(Gdx.files.internal("particles/rocket-trail.p"), Gdx.files.internal("particles"));
+            particleEffectPool = new ParticleEffectPool(particleEffect, 1, 10);
+            particleEffects = new Pool<ParticleEffectPool.PooledEffect>() {
+                @Override
+                protected ParticleEffectPool.PooledEffect newObject() {
+                    return particleEffectPool.obtain();
+                }
+            };
+
+            // Initialize pause button
+            pauseButton = new Rectangle(
+                Gdx.graphics.getWidth() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
+                Gdx.graphics.getHeight() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
+                PAUSE_BUTTON_SIZE,
+                PAUSE_BUTTON_SIZE
+            );
+
+            resetGame();
+            initialized = true;
+        }
+        // If already initialized, just resume - don't recreate anything
     }
 
     private void resetGame() {
@@ -292,6 +321,9 @@ public class FirstScreen implements Screen {
         lives = MAX_LIVES;
         invulnerabilityTimer = 0;
         holdTimer = 0;
+        powerUpSpawnTimer = 0;
+        slowTimeMultiplier = 1.0f;
+        scoreMultiplier = 1;
 
         float rocketWidth = ROCKET_SIZE;
         float rocketHeight = ROCKET_SIZE * ((float)rocket.getHeight() / rocket.getWidth());
@@ -299,6 +331,8 @@ public class FirstScreen implements Screen {
 
         spikeData.clear();
         scorePopups.clear();
+        activePowerUps.clear();
+        powerUpsOnScreen.clear();
     }
 
     private float getRandomSpikeDelay() {
@@ -312,7 +346,7 @@ public class FirstScreen implements Screen {
     }
 
     private float getCurrentSpikeSpeed() {
-        return BASE_SPIKE_SPEED * difficultyMultiplier;
+        return BASE_SPIKE_SPEED * difficultyMultiplier * slowTimeMultiplier;
     }
 
     private void drawHeart(float x, float y, float size, boolean filled) {
@@ -342,6 +376,7 @@ public class FirstScreen implements Screen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
         // Handle pause button (only when game is active)
         if (!ready && !go && !gameOver && Gdx.input.justTouched()) {
             float touchX = Gdx.input.getX();
@@ -352,6 +387,7 @@ public class FirstScreen implements Screen {
                 return;
             }
         }
+
         if (ready) {
             readyTimer += delta;
             if (readyTimer > 1f) {
@@ -421,6 +457,32 @@ public class FirstScreen implements Screen {
             }
         }
 
+        batch.end();
+
+        // Draw power-ups with pulsing glow effect
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (PowerUp powerUp : powerUpsOnScreen) {
+            float pulse = 1.0f + MathUtils.sin(powerUp.animTimer * 5) * 0.2f;
+
+            // Outer glow
+            shapeRenderer.setColor(powerUp.type.getColorR(), powerUp.type.getColorG(), powerUp.type.getColorB(), 0.3f);
+            shapeRenderer.circle(powerUp.rect.x + powerUp.rect.width / 2 + shakeX,
+                powerUp.rect.y + powerUp.rect.height / 2,
+                powerUp.rect.width / 2 * pulse * 1.5f, 20);
+
+            // Main circle
+            shapeRenderer.setColor(powerUp.type.getColorR(), powerUp.type.getColorG(), powerUp.type.getColorB(), 0.8f);
+            shapeRenderer.circle(powerUp.rect.x + powerUp.rect.width / 2 + shakeX,
+                powerUp.rect.y + powerUp.rect.height / 2,
+                powerUp.rect.width / 2 * pulse, 20);
+        }
+        shapeRenderer.end();
+
+        batch.begin();
+
         if (invulnerabilityTimer > 0) {
             float flashAlpha = (float)Math.sin(invulnerabilityTimer * 20) * 0.5f + 0.5f;
             batch.setColor(1, 1, 1, flashAlpha);
@@ -440,6 +502,59 @@ public class FirstScreen implements Screen {
         difficultyLayout.setText(font, difficultyText);
         font.draw(batch, difficultyText, UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN - 35);
 
+        batch.end();
+
+        // Draw active power-ups UI with progress bars
+        // Draw active power-ups UI with progress bars
+        float powerUpUIX = UI_MARGIN + shakeX;
+        float powerUpUIY = Gdx.graphics.getHeight() - 100;
+
+// Pre-calculate text widths for proper background sizing
+        Array<Float> textWidths = new Array<>();
+        GlyphLayout tempLayout = new GlyphLayout();
+        for (PowerUp powerUp : activePowerUps) {
+            String powerUpText = powerUp.type.getName() + " " + (int)Math.ceil(powerUp.animTimer) + "s";
+            tempLayout.setText(font, powerUpText);
+            textWidths.add(tempLayout.width + 10); // +10 for padding
+        }
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (int i = 0; i < activePowerUps.size; i++) {
+            PowerUp powerUp = activePowerUps.get(i);
+            float bgWidth = Math.max(100, textWidths.get(i)); // Minimum 100 pixels
+
+            // Background for power-up effect
+            shapeRenderer.setColor(powerUp.type.getColorR(), powerUp.type.getColorG(), powerUp.type.getColorB(), 0.7f);
+            shapeRenderer.rect(powerUpUIX, powerUpUIY, bgWidth, 30);
+
+            // Time progress bar
+            float progress = powerUp.animTimer / powerUp.type.getDuration();
+            shapeRenderer.setColor(1, 1, 1, 0.3f);
+            shapeRenderer.rect(powerUpUIX, powerUpUIY, bgWidth * progress, 4);
+
+            powerUpUIY -= 35;
+        }
+        shapeRenderer.end();
+
+        batch.begin();
+
+        // Draw power-up names and timers
+        powerUpUIY = Gdx.graphics.getHeight() - 100;
+        for (PowerUp powerUp : activePowerUps) {
+            font.setColor(1, 1, 1, 1);
+            String powerUpText = powerUp.type.getName() + " " + (int)Math.ceil(powerUp.animTimer) + "s";
+
+            // Red color when expiring soon
+            if (powerUp.animTimer < 3) {
+                font.setColor(1, 0.3f, 0.3f, 1);
+            }
+
+            font.draw(batch, powerUpText, powerUpUIX + 5, powerUpUIY + 20);
+            font.setColor(1, 1, 1, 1);
+
+            powerUpUIY -= 35;
+        }
+
         if (combo >= 2 && !gameOver && comboFont != null) {
             float comboIntensity = Math.min(1f, (float)combo / 10f);
 
@@ -452,18 +567,16 @@ public class FirstScreen implements Screen {
 
             String comboText = "COMBO x" + combo;
             comboLayout.setText(comboFont, comboText);
-            comboFont.draw(batch, comboText, Gdx.graphics.getWidth() - comboLayout.width - UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN);
+
+            comboFont.draw(batch, comboText, Gdx.graphics.getWidth() - comboLayout.width - UI_MARGIN + shakeX, Gdx.graphics.getHeight() - UI_MARGIN - 80);
 
             comboFont.setColor(1, 1, 1, 1);
         }
+
+        batch.end();
+
         // Draw pause button (only when game is active)
         if (!ready && !go && !gameOver) {
-            shapeRenderer.end(); // Закрываем предыдущий shapeRenderer если был открыт
-            batch.end();
-
-            Gdx.gl.glEnable(GL20.GL_BLEND);
-            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.7f);
             shapeRenderer.rect(pauseButton.x, pauseButton.y, pauseButton.width, pauseButton.height);
@@ -477,10 +590,7 @@ public class FirstScreen implements Screen {
             shapeRenderer.rect(pauseButton.x + pauseButton.width * 0.25f, barY, barWidth, barHeight);
             shapeRenderer.rect(pauseButton.x + pauseButton.width * 0.65f, barY, barWidth, barHeight);
             shapeRenderer.end();
-
-            batch.begin();
         }
-        batch.end();
 
         float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
         float heartY = Gdx.graphics.getHeight() - UI_MARGIN - HEART_SIZE - 10;
@@ -492,7 +602,7 @@ public class FirstScreen implements Screen {
 
         if (combo >= 2 && !gameOver && shapeRenderer != null) {
             float barX = Gdx.graphics.getWidth() - COMBO_BAR_WIDTH - UI_MARGIN + shakeX;
-            float barY = Gdx.graphics.getHeight() - COMBO_BAR_Y_OFFSET;
+            float barY = Gdx.graphics.getHeight() - COMBO_BAR_Y_OFFSET - 80;
             float fillWidth = (comboTimer / COMBO_TIMEOUT) * COMBO_BAR_WIDTH;
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -531,7 +641,7 @@ public class FirstScreen implements Screen {
             if (Gdx.input.isTouched()) {
                 holdTimer += delta;
                 if (holdTimer >= HOLD_TIME_FOR_MENU) {
-                    holdTimer = 0; // Reset timer to prevent overflow
+                    holdTimer = 0;
                     game.setHighScore(score);
                     game.setScreen(new MainMenuScreen(game));
                     dispose();
@@ -545,7 +655,8 @@ public class FirstScreen implements Screen {
                 holdTimer = 0;
             }
         } else if (Gdx.input.justTouched()) {
-            if (!ready && !go) {
+            // Don't jump when clicking pause button
+            if (!ready && !go && !pauseButton.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY())) {
                 rocketVelocity = 500f;
 
                 ParticleEffectPool.PooledEffect effect = particleEffects.obtain();
@@ -573,6 +684,7 @@ public class FirstScreen implements Screen {
 
         updateComboTimer(delta);
         updateDifficulty();
+        updatePowerUps(delta);
 
         spikeTimer += delta;
 
@@ -635,11 +747,11 @@ public class FirstScreen implements Screen {
     }
 
     private int calculatePoints() {
-        int pointsEarned = 1;
-        scorePopups.add(new ScorePopup("+1", rocketRect.x, rocketRect.y + rocketRect.height, false));
+        int pointsEarned = 1 * scoreMultiplier;
+        scorePopups.add(new ScorePopup("+" + pointsEarned, rocketRect.x, rocketRect.y + rocketRect.height, false));
 
         if (combo >= COMBO_THRESHOLD) {
-            int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER;
+            int bonusPoints = (combo - COMBO_THRESHOLD + 1) * COMBO_BONUS_MULTIPLIER * scoreMultiplier;
             pointsEarned += bonusPoints;
             scorePopups.add(new ScorePopup("+" + bonusPoints + " COMBO!", rocketRect.x, rocketRect.y + rocketRect.height + 30, true));
         }
@@ -747,6 +859,103 @@ public class FirstScreen implements Screen {
 
     @Override
     public void hide() {
+    }
+
+    private void updatePowerUps(float delta) {
+        powerUpSpawnTimer += delta;
+        if (powerUpSpawnTimer >= POWERUP_SPAWN_INTERVAL) {
+            spawnPowerUp();
+            powerUpSpawnTimer = 0;
+        }
+
+        for (int i = 0; i < activePowerUps.size; i++) {
+            PowerUp powerUp = activePowerUps.get(i);
+            powerUp.animTimer -= delta;
+
+            if (powerUp.animTimer <= 0) {
+                removePowerUpEffect(powerUp.type);
+                activePowerUps.removeIndex(i);
+                i--;
+            }
+        }
+
+        float currentSpeed = getCurrentSpikeSpeed();
+
+        for (int i = 0; i < powerUpsOnScreen.size; i++) {
+            PowerUp powerUp = powerUpsOnScreen.get(i);
+            powerUp.rect.x -= currentSpeed * delta;
+            powerUp.animTimer += delta;
+
+            if (rocketRect.overlaps(powerUp.rect)) {
+                collectPowerUp(powerUp.type);
+                powerUpsOnScreen.removeIndex(i);
+                i--;
+                continue;
+            }
+
+            if (powerUp.rect.x + powerUp.rect.width < 0) {
+                powerUpsOnScreen.removeIndex(i);
+                i--;
+            }
+        }
+    }
+
+    private void spawnPowerUp() {
+        PowerUpType type = PowerUpType.values()[MathUtils.random(PowerUpType.values().length - 1)];
+        float height = Gdx.graphics.getHeight();
+        float y = MathUtils.random(100, height - 100);
+
+        powerUpsOnScreen.add(new PowerUp(Gdx.graphics.getWidth(), y, type));
+    }
+
+    private void collectPowerUp(PowerUpType type) {
+        game.incrementPowerupsCollected();
+
+        for (int i = 0; i < activePowerUps.size; i++) {
+            if (activePowerUps.get(i).type == type) {
+                activePowerUps.removeIndex(i);
+                break;
+            }
+        }
+
+        PowerUp powerUp = new PowerUp(0, 0, type);
+        powerUp.animTimer = type.getDuration();
+        activePowerUps.add(powerUp);
+
+        applyPowerUpEffect(type);
+
+        scorePopups.add(new ScorePopup("+" + type.getName() + "!", rocketRect.x, rocketRect.y + rocketRect.height + 40, true));
+    }
+
+    private void applyPowerUpEffect(PowerUpType type) {
+        switch (type) {
+            case SHIELD:
+                invulnerabilityTimer = type.getDuration();
+                break;
+            case SLOW_TIME:
+                slowTimeMultiplier = 0.5f;
+                break;
+            case DOUBLE_POINTS:
+                scoreMultiplier = 2;
+                break;
+            case MAGNET:
+                break;
+        }
+    }
+
+    private void removePowerUpEffect(PowerUpType type) {
+        switch (type) {
+            case SLOW_TIME:
+                slowTimeMultiplier = 1.0f;
+                break;
+            case DOUBLE_POINTS:
+                scoreMultiplier = 1;
+                break;
+            case SHIELD:
+                break;
+            case MAGNET:
+                break;
+        }
     }
 
     @Override
