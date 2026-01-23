@@ -126,6 +126,11 @@ public class FirstScreen implements Screen {
     private float holdTimer;
     private static final float HOLD_TIME_FOR_MENU = 1.0f;
 
+    // Pause menu
+    private Rectangle pauseButton;
+    private static final float PAUSE_BUTTON_SIZE = 50f;
+    private static final float PAUSE_BUTTON_MARGIN = 10f;
+
     private class SpikeData {
         Rectangle rect;
         int textureIndex;
@@ -255,7 +260,13 @@ public class FirstScreen implements Screen {
                 return particleEffectPool.obtain();
             }
         };
-
+        // Initialize pause button
+        pauseButton = new Rectangle(
+            Gdx.graphics.getWidth() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
+            Gdx.graphics.getHeight() - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
+            PAUSE_BUTTON_SIZE,
+            PAUSE_BUTTON_SIZE
+        );
         resetGame();
     }
 
@@ -331,7 +342,16 @@ public class FirstScreen implements Screen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        // Handle pause button (only when game is active)
+        if (!ready && !go && !gameOver && Gdx.input.justTouched()) {
+            float touchX = Gdx.input.getX();
+            float touchY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
+            if (pauseButton.contains(touchX, touchY)) {
+                game.setScreen(new PauseMenuScreen(game, this));
+                return;
+            }
+        }
         if (ready) {
             readyTimer += delta;
             if (readyTimer > 1f) {
@@ -436,7 +456,30 @@ public class FirstScreen implements Screen {
 
             comboFont.setColor(1, 1, 1, 1);
         }
+        // Draw pause button (only when game is active)
+        if (!ready && !go && !gameOver) {
+            shapeRenderer.end(); // Закрываем предыдущий shapeRenderer если был открыт
+            batch.end();
 
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.7f);
+            shapeRenderer.rect(pauseButton.x, pauseButton.y, pauseButton.width, pauseButton.height);
+
+            // Draw pause icon (two vertical bars)
+            shapeRenderer.setColor(1, 1, 1, 0.9f);
+            float barWidth = pauseButton.width * 0.25f;
+            float barHeight = pauseButton.height * 0.6f;
+            float barY = pauseButton.y + (pauseButton.height - barHeight) / 2;
+
+            shapeRenderer.rect(pauseButton.x + pauseButton.width * 0.25f, barY, barWidth, barHeight);
+            shapeRenderer.rect(pauseButton.x + pauseButton.width * 0.65f, barY, barWidth, barHeight);
+            shapeRenderer.end();
+
+            batch.begin();
+        }
         batch.end();
 
         float heartStartX = Gdx.graphics.getWidth() / 2 - (MAX_LIVES * HEART_SPACING) / 2;
@@ -687,6 +730,11 @@ public class FirstScreen implements Screen {
 
         spikeWidth = width * 0.08f;
         spikeGap = height * 0.25f;
+        // Update pause button position
+        pauseButton.setPosition(
+            width - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN,
+            height - PAUSE_BUTTON_SIZE - PAUSE_BUTTON_MARGIN
+        );
     }
 
     @Override
