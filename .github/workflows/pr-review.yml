@@ -26,3 +26,4 @@ jobs:
           model: 'mistralai/devstral-2512:free'
           openai_base_url: 'https://openrouter.ai/api/v1'
           min_severity: high
+          disable_inline: true
