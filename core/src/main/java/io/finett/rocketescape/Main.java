@@ -12,6 +12,7 @@ public class Main extends Game {
     private static final String PREF_HIGH_SCORE = "high_score";
     private static final String PREF_SOUND_ENABLED = "sound_enabled";
     private static final String PREF_MUSIC_ENABLED = "music_enabled";
+    private static final String PREF_TOTAL_POWERUPS = "total_powerups";
 
     @Override
     public void create() {
@@ -47,7 +48,15 @@ public class Main extends Game {
         preferences.putBoolean(PREF_MUSIC_ENABLED, enabled);
         preferences.flush();
     }
+    public void incrementPowerupsCollected() {
+        int current = preferences.getInteger(PREF_TOTAL_POWERUPS, 0);
+        preferences.putInteger(PREF_TOTAL_POWERUPS, current + 1);
+        preferences.flush();
+    }
 
+    public int getTotalPowerups() {
+        return preferences.getInteger(PREF_TOTAL_POWERUPS, 0);
+    }
     @Override
     public void dispose() {
         super.dispose();
