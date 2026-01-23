@@ -44,21 +44,12 @@ jobs:
           fi
 
       - name: Build APK
-        run: ./gradlew android:assembleRelease --no-daemon
-
-      - name: Sign APK (optional, if you have keystore)
-        if: false  # Set to true if you have signing keys
-        run: |
-          # Add your APK signing commands here
-          # jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-          #   -keystore ${{ secrets.KEYSTORE_FILE }} \
-          #   android/build/outputs/apk/release/android-release-unsigned.apk \
-          #   ${{ secrets.KEY_ALIAS }}
+        run: ./gradlew android:assembleDebug --no-daemon
 
       - name: Rename APK
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
-          mv android/build/outputs/apk/release/android-release-unsigned.apk \
+          mv android/build/outputs/apk/debug/android-debug.apk \
              RocketEscape-${VERSION}.apk
 
       - name: Generate changelog
