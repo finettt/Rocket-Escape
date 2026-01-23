@@ -23,9 +23,10 @@
 - [Getting Started](#-getting-started)
 - [Game Controls](#-game-controls)
 - [Gameplay Guide](#-gameplay-guide)
+- [Game Modes](#-game-modes)
+- [Achievements](#-achievements)
 - [Project Structure](#-project-structure)
 - [Building & Running](#-building--running)
-- [Recent Updates](#-recent-updates)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -36,12 +37,14 @@
 | Feature | Description |
 |---------|-------------|
 | 🔗 **Combo System** | Chain successful maneuvers for bonus points and score multipliers |
-| ❤️ **Lives System** | 3 lives with invulnerability period after hits |
+| ❤️ **Lives System** | Multiple lives with invulnerability period after hits |
 | 📈 **Progressive Difficulty** | Game intensity increases as your score grows |
 | 🎯 **Score Multiplier** | Build longer combos to maximize your score |
 | ⚡ **Visual Effects** | Particle trails, screen shake, and flashing indicators |
 | 🏆 **High Scores** | Track and compete against your best performance |
 | 🎵 **Dynamic Obstacles** | Variable spacing for unpredictable gameplay |
+| 🎮 **Game Modes** | Choose from Classic, Hardcore, Zen, or Time Attack modes |
+| 🏅 **Achievements** | Unlock achievements for completing various challenges |
 
 ---
 
@@ -97,7 +100,7 @@ cd Rocket-Escape
 │  2. ⭐ Complete maneuvers to build combos           │
 │  3. ⏱️  Watch combo timers - flashing warns expiry  │
 │  4. 🎯 Maximize combo multipliers for high scores   │
-│  5. ❤️ Use 3 lives wisely - invulnerability on hit  │
+│  5. ❤️ Use your lives wisely - invulnerability on hit  │
 │  6. 📈 Survive longer - difficulty increases!       │
 └─────────────────────────────────────────────────────┘
 ```
@@ -110,6 +113,38 @@ cd Rocket-Escape
 
 ---
 
+## 🎮 Game Modes
+
+| Mode | Description | Starting Difficulty | Lives |
+|------|-------------|---------------------|-------|
+| 🌟 Classic | Standard gameplay with multiple lives | 1.0x | 3 |
+| 💀 Hardcore | One life, faster start, 1.5x score | 1.5x | 1 |
+| 🧘 Zen Mode | No death, infinite flight | 1.0x | 999 |
+| ⏱️ Time Attack | 60 seconds to score high | 1.3x | 3 |
+
+Each game mode offers a unique challenge and experience. Choose the one that fits your playstyle!
+
+---
+
+## 🏅 Achievements
+
+Unlock achievements by completing various challenges:
+
+| Achievement | Description | Requirement |
+|-------------|-------------|-------------|
+| 🚀 First Flight | Play your first game | Play 1 game |
+| 🔗 Combo Master | Reach 10x combo | 10x combo |
+| 🔗 Combo Legend | Reach 25x combo | 25x combo |
+| 🏆 Survivor | Score 50 points | 50 points |
+| 🏆 Century | Score 100 points | 100 points |
+| 🏆 Double Century | Score 200 points | 200 points |
+| ✅ Perfect Flight | Score 30 without taking damage | 30 points without damage |
+| ⚡ Speed Demon | Survive 2.0x difficulty | 2.0x difficulty |
+| 🎁 Powerup Collector | Collect 10 power-ups | 10 power-ups |
+| 💪 Hardcore Hero | Score 50 in one life | 50 points in Hardcore mode |
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -119,7 +154,13 @@ RocketEscape/
 │       ├── Main.java           # Entry point & state management
 │       ├── FirstScreen.java    # Main gameplay screen
 │       ├── MainMenuScreen.java # Menu system
-│       └── SettingsScreen.java # Settings menu
+│       ├── SettingsScreen.java # Settings menu
+│       ├── GameModeSelectScreen.java # Game mode selection
+│       ├── AchievementsScreen.java # Achievements display
+│       ├── PauseMenuScreen.java # Pause menu
+│       ├── Achievement.java    # Achievement definitions
+│       ├── GameMode.java       # Game mode definitions
+│       └── PowerUpType.java    # Power-up types
 │
 ├── 📂 desktop/                 # Desktop implementation
 ├── 📂 android/                 # Android implementation
@@ -168,22 +209,6 @@ RocketEscape/
 ./gradlew html:dist
 # Output: html/build/dist/
 ```
-
----
-
-## 🆕 Recent Updates
-
-### Latest Changes
-- ❤️ **Lives System** - 3 lives with invulnerability after hits
-- 📈 **Progressive Difficulty** - Dynamic difficulty scaling
-- 🎲 **Variable Obstacle Spacing** - More unpredictable gameplay
-- ✨ **Enhanced Visuals** - Screen shake and improved particles
-
-### Roadmap
-- [ ] 🎵 Sound effects and music
-- [ ] 🌟 Power-ups system
-- [ ] 🏅 Achievement system
-- [ ] 🌐 Online leaderboards
 
 ---
 
